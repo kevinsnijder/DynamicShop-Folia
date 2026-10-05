@@ -3,7 +3,9 @@ DynamicShop — Dynamic Global Trade Market
 
 A fully dynamic, supply-and-demand driven economy system for Minecraft servers.
 
-Current version: **3.0.4** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
+Current version: **3.0.5** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
+
+Version 3.0.5 fixes in-game searching for registered custom items. Search finds their visible names, keeps them in the selected category, and supports buying and selling directly from the results. Large searches now have previous and next page buttons.
 
 Version 3.0.4 enables buying and selling physical custom items with independent stock and adds them to the website category editor, including trading controls and permanent removal. See [CHANGELOG.md](CHANGELOG.md) for details.
 

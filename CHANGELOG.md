@@ -1,5 +1,19 @@
 # Release notes
 
+## 3.0.5
+
+This update fixes custom items missing from the in-game search. The previous search only checked ordinary Minecraft material entries, so a newly registered watering can could appear in Gardening but disappear when you searched for it. Search now includes those separately registered custom entries.
+
+- **Search by the name shown on the item.** Oraxen, Nexo, ItemsAdder, ValhallaMMO, and saved custom variants are included. Item names keep their normal priority over fallback names, and formatting codes do not affect matching. Capital letters, underscores, and extra spaces are handled consistently.
+- **Category searches include their custom items.** Searching Gardening finds custom entries assigned to Gardening. The all-items search includes custom entries across categories. Disabled entries stay hidden.
+- **Trade directly from a custom search result.** Results use the same custom item display, stock, pricing, and buying/selling controls as the category shop. Clicking keeps the custom item's ID and template, so sales update its stock and leave other items that share its Minecraft material alone. Dialog and Bedrock controls return to the same search.
+- **More than 45 matches are reachable.** Previous and next buttons let players browse every page of results instead of silently dropping matches after the first page.
+- **Current trading settings still apply.** If selling is disabled after a search opens, the old result cannot bypass that setting.
+
+Replace the plugin JAR with 3.0.5 and restart the server. This fix does not require changes to custom item IDs, categories, or website files.
+
+Validation: 114 Java tests pass. Regression tests cover all five physical delivery methods, visible names, category boundaries, disabled entries, pagination, custom sales, and dialog routing. These checks use isolated fixtures; the reporting server still needs a live check.
+
 ## 3.0.4
 
 This update fixes the remaining problems with custom items. In 3.0.3, an item could be added to the right category but still behave like a purchase-only Server Shop entry. It could also be missing from that category in the web editor. Custom items can now be traded and managed in their assigned categories.

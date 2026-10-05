@@ -457,6 +457,11 @@ public class SpecialShopManager {
         return plugin.getConfig().getBoolean("special_items." + id + "." + flag, false);
     }
 
+    public String getDisplayName(SpecialShopItem item) {
+        return org.minecraftsmp.dynamicshop.util.ShopItemNames.getDisplayName(
+                item, getTradeTemplate(item));
+    }
+
     public boolean canTrade(Player player, String id, boolean buying) {
         SpecialShopItem item = registry.get(id);
         return item != null

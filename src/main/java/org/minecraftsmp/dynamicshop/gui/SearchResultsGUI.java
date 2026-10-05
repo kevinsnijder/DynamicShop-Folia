@@ -7,12 +7,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
+import org.minecraftsmp.dynamicshop.category.SpecialShopItem;
+import org.minecraftsmp.dynamicshop.managers.ConfigCacheManager;
+import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ProtocolShopManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
-import org.minecraftsmp.dynamicshop.managers.ConfigCacheManager;
 import org.minecraftsmp.dynamicshop.util.ShopItemBuilder;
 import org.minecraftsmp.dynamicshop.util.ShopItemNames;
-import org.minecraftsmp.dynamicshop.managers.MessageManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +24,9 @@ public class SearchResultsGUI {
     private final Player player;
     private final ProtocolShopManager pm;
     private final List<Material> results;
-    // private final ItemCategory category; // Removed unused field
+    private final List<SpecialShopItem> specialResults = new ArrayList<>();
+    private final ShopGUI specialRenderer;
+    private int page;
     private Inventory inventory;
 
     /**
@@ -43,19 +47,8 @@ public class SearchResultsGUI {
         this.results = new ArrayList<>();
 
         // Get items to search through
-        List<Material> searchPool;
-        if (category != null) {
-            // Search only in this category
-            searchPool = ShopDataManager.getItemsInCategory(category);
-        } else {
-            // Search all items
-            searchPool = new ArrayList<>();
-            for (Material mat : Material.values()) {
-                if (mat.isItem() && ShopDataManager.getPrice(mat) >= 0) {
-                    searchPool.add(mat);
-                }
-            }
-        }
+        List<Material> searchPool =
+                ShopDataManager.getItemsInCategory(category != null ? category : ItemCategory.MISC);
 
         // Search the name players see, including names stored on item templates.
         // Named custom items must not also match their underlying vanilla material.
@@ -65,6 +58,25 @@ public class SearchResultsGUI {
             }
         }
 
+        var manager = plugin.getSpecialShopManager();
+        if (manager != null) {
+            manager.getAllSpecialItems().values().stream()
+                    .filter(SpecialShopItem::isTradeItem)
+                    .filter(
+                            item ->
+                                    category == null
+                                            || category == ItemCategory.MISC
+                                            || item.getCategory() == category)
+                    .filter(item -> !manager.isTradeDisabled(item.getId(), "disabled"))
+                    .filter(item -> ShopItemNames.matches(manager.getDisplayName(item), query))
+                    .sorted(java.util.Comparator.comparing(SpecialShopItem::getId))
+                    .forEach(specialResults::add);
+        }
+        specialRenderer =
+                specialResults.isEmpty()
+                        ? null
+                        : new ShopGUI(plugin, player, ItemCategory.SERVER_SHOP);
+
         // REGISTER BEFORE OPENING (critical)
         plugin.getShopListener().registerSearch(player, this);
         open();
@@ -73,7 +85,7 @@ public class SearchResultsGUI {
     public void open() {
         // VALID TITLE SO SHOPLISTENER DETECTS IT
         java.util.Map<String, String> placeholders = new java.util.HashMap<>();
-        placeholders.put("count", String.valueOf(results.size()));
+        placeholders.put("count", String.valueOf(resultCount()));
 
         inventory = pm.createVirtualInventory(
                 player,
@@ -103,10 +115,30 @@ public class SearchResultsGUI {
         }
 
         // Items
-        int limit = Math.min(45, results.size());
-        for (int i = 0; i < limit; i++) {
-            pm.sendSlot(inventory, i, buildResultItem(results.get(i)));
+        int start = page * 45;
+        int end = Math.min(start + 45, resultCount());
+        for (int index = start; index < end; index++) {
+            ItemStack item =
+                    index < results.size()
+                            ? buildResultItem(results.get(index))
+                            : specialRenderer.buildSpecialShopItem(
+                                    specialResults.get(index - results.size()));
+            pm.sendSlot(inventory, index - start, item);
         }
+
+        if (page > 0)
+            pm.sendSlot(
+                    inventory,
+                    45,
+                    ShopItemBuilder.navItem(
+                            plugin.getMessageManager().getMessage("gui-nav-previous"),
+                            Material.ARROW));
+        if (end < resultCount())
+            pm.sendSlot(
+                    inventory,
+                    53,
+                    ShopItemBuilder.navItem(
+                            plugin.getMessageManager().getMessage("gui-nav-next"), Material.ARROW));
 
         // NAVIGATION BACK BUTTON
         ItemStack back = ShopItemBuilder.navItem(
@@ -129,11 +161,13 @@ public class SearchResultsGUI {
         // Display name priority: custom_name > template's name > prettified material name
         String customName = ShopDataManager.getCustomName(mat);
         if (customName != null) {
-            net.kyori.adventure.text.Component nameComponent = MessageManager.parseComponent("§e§l" + customName);
+            net.kyori.adventure.text.Component nameComponent =
+                    MessageManager.parseComponent("§e§l" + customName);
             org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(meta, nameComponent);
             org.minecraftsmp.dynamicshop.util.PaperCompat.setItemName(meta, nameComponent);
         } else if (!meta.hasDisplayName() && !meta.hasItemName()) {
-            org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(meta, MessageManager.parseComponent("§e§l" + mat.name().replace("_", " ")));
+            org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(
+                    meta, MessageManager.parseComponent("§e§l" + mat.name().replace("_", " ")));
         }
 
         double buy = ShopDataManager.getTotalBuyCost(mat, 1);
@@ -157,7 +191,9 @@ public class SearchResultsGUI {
         if (stock < 0) {
             java.util.Map<String, String> stockPlaceholders = new java.util.HashMap<>();
             stockPlaceholders.put("stock", String.valueOf((int) stock));
-            lore.add(plugin.getMessageManager().getMessage("search-lore-stock-negative", stockPlaceholders));
+            lore.add(
+                    plugin.getMessageManager()
+                            .getMessage("search-lore-stock-negative", stockPlaceholders));
         } else if (stock == 0) {
             lore.add(plugin.getMessageManager().getMessage("search-lore-out-of-stock"));
         } else {
@@ -186,6 +222,17 @@ public class SearchResultsGUI {
     // --------------------------------------------------------
     public void handleClick(int slot, boolean rightClick, boolean shiftClick) {
 
+        if (slot == 45 && page > 0) {
+            page--;
+            render();
+            return;
+        }
+        if (slot == 53 && (page + 1) * 45 < resultCount()) {
+            page++;
+            render();
+            return;
+        }
+
         // BACK button
         if (slot == 49) {
             plugin.getShopListener().unregisterSearch(player);
@@ -198,10 +245,22 @@ public class SearchResultsGUI {
 
         if (slot < 0 || slot >= 45)
             return;
-        if (slot >= results.size())
-            return;
+        int index = page * 45 + slot;
+        if (index >= resultCount()) return;
 
-        Material mat = results.get(slot);
+        if (index >= results.size()) {
+            plugin.getShopListener()
+                    .handleItemClick(
+                            player,
+                            this,
+                            null,
+                            specialResults.get(index - results.size()),
+                            rightClick,
+                            shiftClick);
+            return;
+        }
+
+        Material mat = results.get(index);
 
         // Dialog-based buy/sell (configurable)
         if (ConfigCacheManager.useDialogGui && !org.minecraftsmp.dynamicshop.util.BedrockUtil.isBedrock(player)) {
@@ -223,7 +282,8 @@ public class SearchResultsGUI {
                 java.util.Map<String, String> sellPlaceholders = new java.util.HashMap<>();
                 sellPlaceholders.put("item", mat.name());
                 player.sendMessage(
-                        plugin.getMessageManager().getMessage("search-message-no-item-sell", sellPlaceholders));
+                        plugin.getMessageManager()
+                                .getMessage("search-message-no-item-sell", sellPlaceholders));
                 return;
             }
 
@@ -236,5 +296,9 @@ public class SearchResultsGUI {
 
     public Inventory getInventory() {
         return inventory;
+    }
+
+    private int resultCount() {
+        return results.size() + specialResults.size();
     }
 }

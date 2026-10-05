@@ -1080,7 +1080,7 @@ public class ShopListener implements Listener {
 
     private void tradeClickedItem(
             Player p,
-            ShopGUI gui,
+            Object gui,
             boolean right,
             boolean shift,
             Material mat,
@@ -1253,13 +1253,21 @@ public class ShopListener implements Listener {
 
     private void handleRegularShopClick(
             Player p, ShopGUI gui, int slot, boolean right, boolean shift) {
-        // REGULAR ITEM
-        Material mat = gui.getItemFromSlot(slot);
+        handleItemClick(
+                p, gui, gui.getItemFromSlot(slot), gui.getSpecialItemFromSlot(slot), right, shift);
+    }
+
+    public void handleItemClick(
+            Player p,
+            Object gui,
+            Material mat,
+            SpecialShopItem mixedSpecialItem,
+            boolean right,
+            boolean shift) {
         ItemStack deliveryOverride = null; // For stored_item variants
         double variantBasePrice = -1; // -1 means use normal pricing
         String variantId = null;
 
-        SpecialShopItem mixedSpecialItem = gui.getSpecialItemFromSlot(slot);
         if (mixedSpecialItem != null && !mixedSpecialItem.isTradeItem()) {
             if (right) {
                 p.sendMessage(plugin.getMessageManager().getMessage("cannot-sell-special-item"));
@@ -1267,7 +1275,7 @@ public class ShopListener implements Listener {
             }
 
             plugin.getSpecialShopManager().purchase(p, mixedSpecialItem);
-            gui.render();
+            if (gui instanceof ShopGUI shop) shop.render();
             return;
         }
 

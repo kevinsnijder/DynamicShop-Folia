@@ -810,6 +810,114 @@ public class SalePaymentFailureTest {
         assertEquals(60, credited, 0.000001);
     }
 
+    @Test
+    public void customSearchResultSellsTheMatchingVariantUsingItsOwnStockAndPrice()
+            throws Exception {
+        mode = "SUCCESS";
+        resetSale();
+        customItems();
+        contents[0] = new CustomStack("can", 6);
+        contents[1] = new PlainTestStack(Material.GOLDEN_HORSE_ARMOR, 2);
+        var search =
+                new org.minecraftsmp.dynamicshop.gui.SearchResultsGUI(
+                        plugin,
+                        player,
+                        "custom can",
+                        org.minecraftsmp.dynamicshop.category.ItemCategory.CUSTOM_1) {
+                    @Override
+                    public void
+                            open() {} // Exercise real search and sale without opening a server
+                                      // inventory.
+
+                    @Override
+                    public void render() {} // No protocol packets in this transaction fixture.
+                };
+        search.handleClick(0, true, true);
+        assertNull(contents[0]);
+        assertEquals(2, contents[1].getAmount());
+        assertEquals(120, credited, 0.000001);
+        assertEquals(6, ShopDataManager.getVariantStock("can"), 0);
+        assertEquals(0, ShopDataManager.getStock(Material.GOLDEN_HORSE_ARMOR), 0);
+    }
+
+    @Test
+    public void customSearchDialogKeepsTheVariantAndReturnsToTheSameSearch() throws Exception {
+        resetSale();
+        customItems();
+        var dialogPlayer =
+                PluginTestFixture.proxy(
+                        Player.class,
+                        (object, method, args) -> {
+                            if (method.getName().equals("getUniqueId")) return playerId;
+                            if (method.getName().equals("closeInventory")) return null;
+                            throw new AssertionError(method.getName());
+                        });
+        List<Object> parents = new ArrayList<>();
+        PluginTestFixture.set(
+                plugin,
+                DynamicShop.class,
+                "shopDialogManager",
+                new org.minecraftsmp.dynamicshop.gui.ShopDialogManager(plugin) {
+                    @Override
+                    public void openDialog(
+                            Player p,
+                            Material mat,
+                            Object gui,
+                            ItemStack template,
+                            double price,
+                            String id) {
+                        assertSame(dialogPlayer, p);
+                        assertEquals(Material.GOLDEN_HORSE_ARMOR, mat);
+                        assertEquals("can", id);
+                        assertEquals(100, price, 0);
+                        assertTrue(template.isSimilar(new CustomStack("can", 1)));
+                        parents.add(gui);
+                    }
+                });
+        boolean original = ConfigCacheManager.useDialogGui;
+        try {
+            ConfigCacheManager.useDialogGui = true;
+            var search =
+                    new org.minecraftsmp.dynamicshop.gui.SearchResultsGUI(
+                            plugin,
+                            dialogPlayer,
+                            "custom can",
+                            org.minecraftsmp.dynamicshop.category.ItemCategory.CUSTOM_1) {
+                        @Override
+                        public void
+                                open() {} // Verify dialog routing without opening server
+                                          // inventories.
+                    };
+            search.handleClick(0, false, false);
+            assertEquals(List.of(search), parents);
+            assertEquals(0, depositCalls);
+        } finally {
+            ConfigCacheManager.useDialogGui = original;
+        }
+    }
+
+    @Test
+    public void customSearchRejectsAnEntryDisabledAfterTheResultsOpened() throws Exception {
+        mode = "SUCCESS";
+        resetSale();
+        customItems();
+        contents[0] = new CustomStack("can", 6);
+        var search =
+                new org.minecraftsmp.dynamicshop.gui.SearchResultsGUI(
+                        plugin,
+                        player,
+                        "custom can",
+                        org.minecraftsmp.dynamicshop.category.ItemCategory.CUSTOM_1) {
+                    @Override
+                    public void open() {} // Keep a stale result open for the transaction check.
+                };
+        plugin.getConfig().set("special_items.can.disable-sell", true);
+        search.handleClick(0, true, true);
+        assertEquals(6, contents[0].getAmount());
+        assertEquals(0, depositCalls);
+        assertEquals(0, ShopDataManager.getVariantStock("can"), 0);
+    }
+
     private static final class TradeGui extends org.minecraftsmp.dynamicshop.gui.ShopGUI {
         private org.minecraftsmp.dynamicshop.category.SpecialShopItem entry;
 

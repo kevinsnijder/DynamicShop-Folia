@@ -240,10 +240,8 @@ public class ShopGUI {
         render();
     }
 
-    /**
-     * Build display item for special shop items (permissions/server-shop)
-     */
-    private ItemStack buildSpecialShopItem(SpecialShopItem specialItem) {
+    /** Build display item for special shop items (permissions/server-shop) */
+    ItemStack buildSpecialShopItem(SpecialShopItem specialItem) {
         ItemStack item = resolveSpecialDisplayItem(specialItem);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {

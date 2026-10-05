@@ -1,14 +1,13 @@
 package org.minecraftsmp.dynamicshop.gui;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.minecraftsmp.dynamicshop.DynamicShop;
-import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.managers.MessageManager;
+import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +21,7 @@ public class ItemActionGUI {
     private final DynamicShop plugin;
     private final Player player;
     private final Material targetItem;
-    private final ShopGUI parentShop;
+    private final Object parentShop;
     private final ItemStack deliveryOverride;
     private final double variantBasePrice;
     private final String variantId;
@@ -45,8 +44,14 @@ public class ItemActionGUI {
         this(plugin, player, targetItem, parentShop, null, -1, null);
     }
 
-    public ItemActionGUI(DynamicShop plugin, Player player, Material targetItem, ShopGUI parentShop,
-                         ItemStack deliveryOverride, double variantBasePrice, String variantId) {
+    public ItemActionGUI(
+            DynamicShop plugin,
+            Player player,
+            Material targetItem,
+            Object parentShop,
+            ItemStack deliveryOverride,
+            double variantBasePrice,
+            String variantId) {
         this.plugin = plugin;
         this.player = player;
         this.targetItem = targetItem;
@@ -116,7 +121,9 @@ public class ItemActionGUI {
         }
         ItemMeta meta = item.getItemMeta();
         if (meta != null && !meta.hasDisplayName() && !meta.hasItemName()) {
-            org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(meta, MessageManager.parseComponent("§e§l" + targetItem.name().replace("_", " ")));
+            org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(
+                    meta,
+                    MessageManager.parseComponent("§e§l" + targetItem.name().replace("_", " ")));
             item.setItemMeta(meta);
         }
         return item;
@@ -130,7 +137,8 @@ public class ItemActionGUI {
         ItemStack info = new ItemStack(Material.PAPER);
         ItemMeta meta = info.getItemMeta();
         if (meta != null) {
-            org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(meta, MessageManager.parseComponent("§e§lItem Info"));
+            org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(
+                    meta, MessageManager.parseComponent("§e§lItem Info"));
 
             List<String> lore = new ArrayList<>();
             lore.add("§7Buy: §a" + plugin.getEconomyManager().format(buyPrice));
@@ -148,12 +156,23 @@ public class ItemActionGUI {
                 if (capped) percentIncrease = maxPercent;
 
                 java.util.Map<String, String> percentPlaceholders = new java.util.HashMap<>();
-                percentPlaceholders.put("percent", String.format("%,.0f", percentIncrease) + (capped ? " (MAX)" : ""));
-                percentPlaceholders.put("hourly_rate", String.format("%.1f", org.minecraftsmp.dynamicshop.managers.ConfigCacheManager.hourlyIncreasePercent));
-                MessageManager.addLoreIfNotEmpty(lore,
-                        plugin.getMessageManager().getMessage("shop-lore-price-increase", percentPlaceholders));
-                MessageManager.addLoreIfNotEmpty(lore,
-                        plugin.getMessageManager().getMessage("shop-lore-price-increase-note", percentPlaceholders));
+                percentPlaceholders.put(
+                        "percent",
+                        String.format("%,.0f", percentIncrease) + (capped ? " (MAX)" : ""));
+                percentPlaceholders.put(
+                        "hourly_rate",
+                        String.format(
+                                "%.1f",
+                                org.minecraftsmp.dynamicshop.managers.ConfigCacheManager
+                                        .hourlyIncreasePercent));
+                MessageManager.addLoreIfNotEmpty(
+                        lore,
+                        plugin.getMessageManager()
+                                .getMessage("shop-lore-price-increase", percentPlaceholders));
+                MessageManager.addLoreIfNotEmpty(
+                        lore,
+                        plugin.getMessageManager()
+                                .getMessage("shop-lore-price-increase-note", percentPlaceholders));
 
             } else {
                 lore.add("§7Stock: §a" + String.format("%.0f", stock));
@@ -240,7 +259,8 @@ public class ItemActionGUI {
             case SLOT_BACK -> {
                 // Return to parent shop
                 p.closeInventory();
-                parentShop.open();
+                if (parentShop instanceof ShopGUI shop) shop.open();
+                else if (parentShop instanceof SearchResultsGUI search) search.open();
             }
         }
     }
@@ -249,7 +269,7 @@ public class ItemActionGUI {
         return inventory;
     }
 
-    public ShopGUI getParentShop() {
+    public Object getParentShop() {
         return parentShop;
     }
 }

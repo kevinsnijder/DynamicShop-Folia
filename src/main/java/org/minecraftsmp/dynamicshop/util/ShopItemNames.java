@@ -1,14 +1,17 @@
 package org.minecraftsmp.dynamicshop.util;
 
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.stream.Collectors;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.minecraftsmp.dynamicshop.category.SpecialShopItem;
 import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 /** Visible item names for search, dialogs, and transaction messages. */
 public final class ShopItemNames {
@@ -40,6 +43,20 @@ public final class ShopItemNames {
             }
         }
         return materialName(item.getType());
+    }
+
+    public static String getDisplayName(SpecialShopItem item, ItemStack template) {
+        ItemMeta meta = template != null && template.hasItemMeta() ? template.getItemMeta() : null;
+        if (meta != null && (meta.hasDisplayName() || meta.hasItemName())) {
+            return getDisplayName(template);
+        }
+        String configured = item.getDisplayName();
+        if (configured != null && !configured.equals(item.getId())) {
+            return PLAIN.serialize(MessageManager.parseComponent(configured));
+        }
+        return item.getDisplayMaterial() != null
+                ? materialName(item.getDisplayMaterial())
+                : item.getId();
     }
 
     public static boolean matches(String displayName, String query) {

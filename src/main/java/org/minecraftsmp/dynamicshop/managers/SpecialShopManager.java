@@ -408,6 +408,67 @@ public class SpecialShopManager {
         return registry.get(id);
     }
 
+    /** Resolves delivery without substituting a vanilla item when a provider is unavailable. */
+    public ItemStack getTradeTemplate(SpecialShopItem item) {
+        if (item == null || !item.isTradeItem()) return null;
+        String provider =
+                switch (item.getDeliveryMethod().toLowerCase(java.util.Locale.ROOT)) {
+                    case "itemsadder" -> "ItemsAdder";
+                    case "nexo" -> "Nexo";
+                    case "oraxen" -> "Oraxen";
+                    case "valhallammo" -> "ValhallaMMO";
+                    default -> null;
+                };
+        if (provider != null && !CustomItemSupport.enabled(provider)) return null;
+        ItemStack template =
+                switch (item.getDeliveryMethod().toLowerCase(java.util.Locale.ROOT)) {
+                    case "itemsadder" -> ItemsAdderWrapper.getItem(item.getNbt());
+                    case "nexo" -> NexoWrapper.getItem(item.getNbt());
+                    case "oraxen" -> OraxenWrapper.getItem(item.getNbt());
+                    case "valhallammo" -> ValhallaMMOWrapper.getItem(item.getNbt());
+                    case "stored_item" ->
+                            plugin.getConfig()
+                                    .getItemStack("special_items." + item.getId() + ".stored_item");
+                    default -> null;
+                };
+        if (template == null || template.getType() == Material.AIR) return null;
+        template = template.clone();
+        template.setAmount(1);
+        return template;
+    }
+
+    public SpecialShopItem findTradeItem(ItemStack stack) {
+        if (stack == null || stack.getType() == Material.AIR) return null;
+        return registry.values().stream()
+                .filter(SpecialShopItem::isTradeItem)
+                .sorted(java.util.Comparator.comparing(SpecialShopItem::getId))
+                .filter(
+                        item -> {
+                            ItemStack template = getTradeTemplate(item);
+                            return template != null
+                                    && template.isSimilar(stack)
+                                    && stack.isSimilar(template);
+                        })
+                .findFirst()
+                .orElse(null);
+    }
+
+    public boolean isTradeDisabled(String id, String flag) {
+        return plugin.getConfig().getBoolean("special_items." + id + "." + flag, false);
+    }
+
+    public boolean canTrade(Player player, String id, boolean buying) {
+        SpecialShopItem item = registry.get(id);
+        return item != null
+                && item.isTradeItem()
+                && Double.isFinite(item.getPrice())
+                && item.getPrice() >= 0
+                && !isTradeDisabled(id, "disabled")
+                && !isTradeDisabled(id, buying ? "disable-buy" : "disable-sell")
+                && (!item.hasRequiredPermission()
+                        || player.hasPermission(item.getRequiredPermission()));
+    }
+
     /**
      * Get a permission item by its index (0-based) in the permission items list.
      * Returns null if index is out of bounds.
@@ -539,7 +600,26 @@ public class SpecialShopManager {
         SpecialShopItem item = requestedItem == null ? null : registry.get(requestedItem.getId());
         if (item == null || item != requestedItem) {
             p.sendMessage(
-                    "§cThis shop item has changed. Reopen the shop to see its current price and requirements.");
+                    "§cThis shop item has changed. Reopen the shop to see its current price and"
+                        + " requirements.");
+            return;
+        }
+        if (item.isTradeItem()) {
+            ItemStack template = getTradeTemplate(item);
+            if (template == null) {
+                p.sendMessage(
+                        "§cThis custom item is unavailable. Please contact an administrator.");
+                return;
+            }
+            plugin.getShopListener()
+                    .buyItem(
+                            p,
+                            template.getType(),
+                            Math.max(1, item.getAmount()),
+                            null,
+                            template,
+                            item.getPrice(),
+                            item.getId());
             return;
         }
         if (!Double.isFinite(item.getPrice()) || item.getPrice() < 0) {

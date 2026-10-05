@@ -188,14 +188,14 @@ public class ItemActionGUI {
     }
 
     private double getBuyCost(int amount) {
-        if (variantId != null && variantBasePrice > 0) {
+        if (variantId != null && variantBasePrice >= 0) {
             return ShopDataManager.getTotalVariantBuyCost(variantId, targetItem, variantBasePrice, amount);
         }
         return ShopDataManager.getTotalBuyCost(targetItem, amount);
     }
 
     private double getSellValue(int amount) {
-        if (variantId != null && variantBasePrice > 0) {
+        if (variantId != null && variantBasePrice >= 0) {
             return ShopDataManager.getTotalVariantSellValue(variantId, targetItem, variantBasePrice, amount);
         }
         return ShopDataManager.getTotalSellValue(targetItem, amount);

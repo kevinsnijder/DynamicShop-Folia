@@ -4,10 +4,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
-import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
@@ -550,9 +550,28 @@ public class ShopDataManager {
         return currentStock - amount >= minLimit;
     }
 
+    /** Custom entries use their own configuration even when their vanilla material is absent. */
+    public static ShopItemConfig getVariantConfig(String id, Material mat) {
+        var section =
+                plugin == null
+                        ? null
+                        : plugin.getConfig().getConfigurationSection("special_items." + id);
+        if (section == null) return itemConfigs.get(mat);
+        return new ShopItemConfig(
+                section.getDouble("price"),
+                section.contains("max-stock") ? section.getDouble("max-stock") : null,
+                section.contains("min-stock") ? section.getDouble("min-stock") : null,
+                section.contains("max-stock-storage") ? section.getInt("max-stock-storage") : null,
+                section.contains("min-stock-storage") ? section.getInt("min-stock-storage") : null,
+                section.getBoolean("disable-buy"),
+                section.getBoolean("disable-sell"),
+                null,
+                section.contains("stock-rate") ? section.getDouble("stock-rate") : null);
+    }
+
     public static boolean canBuyVariant(String variantId, Material mat, int amount) {
         if (amount <= 0) return false;
-        ShopItemConfig cfg = itemConfigs.get(mat);
+        ShopItemConfig cfg = getVariantConfig(variantId, mat);
         if (cfg == null || cfg.disableBuy) return false;
 
         double currentStock = getVariantStock(variantId);
@@ -579,7 +598,7 @@ public class ShopDataManager {
 
     public static boolean canSellVariant(String variantId, Material mat, int amount) {
         if (amount <= 0) return false;
-        ShopItemConfig cfg = itemConfigs.get(mat);
+        ShopItemConfig cfg = getVariantConfig(variantId, mat);
         if (cfg == null || cfg.disableSell) return false;
 
         double currentStock = getVariantStock(variantId);
@@ -610,7 +629,7 @@ public class ShopDataManager {
     }
 
     public static int getVariantBuyLimit(String variantId, Material mat) {
-        ShopItemConfig cfg = itemConfigs.get(mat);
+        ShopItemConfig cfg = getVariantConfig(variantId, mat);
         if (cfg == null) return 0;
 
         double currentStock = getVariantStock(variantId);
@@ -644,7 +663,7 @@ public class ShopDataManager {
     }
 
     public static int getVariantSellLimit(String variantId, Material mat) {
-        ShopItemConfig cfg = itemConfigs.get(mat);
+        ShopItemConfig cfg = getVariantConfig(variantId, mat);
         if (cfg == null) return 0;
 
         double currentStock = getVariantStock(variantId);
@@ -737,7 +756,7 @@ public class ShopDataManager {
 
     public static double getTotalVariantBuyCost(
             String variantId, Material baseMat, double basePrice, double amount) {
-        ShopItemConfig cfg = itemConfigs.get(baseMat);
+        ShopItemConfig cfg = getVariantConfig(variantId, baseMat);
         if (variantId == null || cfg == null || validQuote(basePrice) < 0 || !validQuantity(amount))
             return -1.0;
 
@@ -768,7 +787,7 @@ public class ShopDataManager {
 
     public static double getTotalVariantSellValue(
             String variantId, Material baseMat, double basePrice, int amount) {
-        ShopItemConfig cfg = itemConfigs.get(baseMat);
+        ShopItemConfig cfg = getVariantConfig(variantId, baseMat);
         if (variantId == null
                 || cfg == null
                 || validQuote(basePrice) < 0
@@ -910,7 +929,9 @@ public class ShopDataManager {
         plugin.getLogger()
                 .info(
                         String.format(
-                                "[DynamicPricing] %s %s amount=%.2f stock=%.2f base=%.4f curve=%.4f shortageHours=%.4f timeMultiplier=%.4f negativeStockMultiplier=%.4f total=%.4f",
+                                "[DynamicPricing] %s %s amount=%.2f stock=%.2f base=%.4f curve=%.4f"
+                                    + " shortageHours=%.4f timeMultiplier=%.4f"
+                                    + " negativeStockMultiplier=%.4f total=%.4f",
                                 action,
                                 itemId,
                                 amount,

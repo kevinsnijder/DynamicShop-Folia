@@ -13,7 +13,7 @@ softdepend: [PlaceholderAPI, ItemsAdder, Nexo, Oraxen, CoinsEngine, floodgate, V
 commands:
   shop:
     description: Open the dynamic shop GUI
-    usage: /shop [<category>|sell <price>|sellhand|sellall]
+    usage: /shop [<category>|sell <price>|sellhand|sellall [hand]]
     aliases: [ dshop, market ]
     permission: dynamicshop.use
   shopadmin:
@@ -42,5 +42,5 @@ permissions:
     description: Allows selling held items via /shop sellhand
     default: false
   dynamicshop.use.sellall:
-    description: Allows selling all items via /shop sellall
+    description: Allows /shop sellall and /shop sellall hand
     default: false

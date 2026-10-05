@@ -9,12 +9,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
 import org.minecraftsmp.dynamicshop.category.SpecialShopItem;
-import org.minecraftsmp.dynamicshop.managers.ItemsAdderWrapper;
-import org.minecraftsmp.dynamicshop.managers.NexoWrapper;
-import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
-import org.minecraftsmp.dynamicshop.managers.ProtocolShopManager;
-import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ConfigCacheManager;
+import org.minecraftsmp.dynamicshop.managers.ItemsAdderWrapper;
+import org.minecraftsmp.dynamicshop.managers.MessageManager;
+import org.minecraftsmp.dynamicshop.managers.NexoWrapper;
+import org.minecraftsmp.dynamicshop.managers.ProtocolShopManager;
+import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.util.ShopItemBuilder;
 
 import java.util.ArrayList;
@@ -72,6 +72,10 @@ public class ShopGUI {
             this.specialItems =
                     plugin.getSpecialShopManager().getAllSpecialItems().values().stream()
                             .filter(item -> item.getCategory() == category)
+                            .filter(
+                                    item ->
+                                            !plugin.getSpecialShopManager()
+                                                    .isTradeDisabled(item.getId(), "disabled"))
                             .collect(Collectors.toList());
             this.allItems = List.of(); // Empty regular items
             this.displayItems = List.of();
@@ -87,6 +91,10 @@ public class ShopGUI {
             this.specialItems =
                     plugin.getSpecialShopManager().getAllSpecialItems().values().stream()
                             .filter(item -> item.getCategory() == category)
+                            .filter(
+                                    item ->
+                                            !plugin.getSpecialShopManager()
+                                                    .isTradeDisabled(item.getId(), "disabled"))
                             .collect(Collectors.toList());
 
             updateDisplayItems(); // Populate displayItems based on initial state
@@ -247,12 +255,7 @@ public class ShopGUI {
                             && ShopDataManager.itemConfigs.containsKey(baseMat)
                             && specialItem.getPrice() > 0;
 
-            // Non-server stored_item variants in regular categories: render like a normal shop item
-            if (!specialItem.isServerShopItem()
-                    && "stored_item".equalsIgnoreCase(specialItem.getDeliveryMethod())
-                    && hasDynamicPrice
-                    && category != ItemCategory.PERMISSIONS
-                    && category != ItemCategory.SERVER_SHOP) {
+            if (specialItem.isTradeItem()) {
                 applyVariantLore(item, meta, specialItem, baseMat);
                 return item;
             }
@@ -646,8 +649,10 @@ public class ShopGUI {
 
         List<String> lore = new ArrayList<>();
 
-        boolean buyDisabled = ShopDataManager.isBuyDisabled(baseMat);
-        boolean sellDisabled = ShopDataManager.isSellDisabled(baseMat);
+        boolean buyDisabled =
+                plugin.getSpecialShopManager().isTradeDisabled(specialItem.getId(), "disable-buy");
+        boolean sellDisabled =
+                plugin.getSpecialShopManager().isTradeDisabled(specialItem.getId(), "disable-sell");
 
         String variantId = specialItem.getId();
         ShopDataManager.initializeVariantData(variantId, baseMat);

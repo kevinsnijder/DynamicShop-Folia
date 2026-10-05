@@ -1,7 +1,27 @@
 # Release notes
 
+## 3.0.4
+
+This update fixes the remaining problems with custom items. In 3.0.3, an item could be added to the right category but still behave like a purchase-only Server Shop entry. It could also be missing from that category in the web editor. Custom items can now be traded and managed in their assigned categories.
+
+- **Players can sell custom items.** This covers physical items from Oraxen, Nexo, ItemsAdder, and ValhallaMMO, as well as saved custom item variants. Right-click selling in the shop and player inventory works, along with `/shop sellhand`, `/shop sellall`, and `/shop sellall hand`.
+- **Each custom item has its own stock and settings.** Its price, stock, storage limits, and buying/selling switches are separate from the ordinary Minecraft item underneath it. Selling a custom watering can, for example, updates that can's stock rather than the stock of its base material.
+- **Sales match the actual custom item.** Ordinary items and other custom variants that share the same base material are left alone. `/shop sellhand` sells only the stack in your hand; `/shop sellall hand` sells matching stacks throughout your inventory.
+- **Custom items appear in the web category editor.** You can change their name, category, price, stock, shortage settings, and availability. The bulk buying and selling controls also work with custom entries.
+- **Removing a custom entry now removes it from the shop configuration.** The web editor no longer just hides it. You can still hide an entry temporarily with the Item disabled switch.
+- **Open menus use the current item settings when you trade.** Price changes, permissions, and disabled entries are checked again before the transaction. If a custom item provider is unavailable or an entry has been deleted, the trade is rejected instead of substituting an ordinary item. Permissions, commands, and other rewards remain purchase-only.
+- **Website update checks follow website changes.** A plugin version change alone no longer asks you to replace unchanged web files. Updated bundles and missing files are detected, while manual updates continue to back up your existing files.
+
+To update, replace the plugin JAR and restart the server. Run `/shopadmin webupdate`, then refresh your browser to load the new editor.
+
+Existing custom categories and delivery IDs are kept. Older entries without a category stay in Server Shop; you can move them using the category field in the web editor. Review the starting stock and storage limits for existing custom entries, since their stock is now tracked independently.
+
+Validation: 108 Java tests and 7 website tests pass, including custom-item sales, stock limits, mixed bulk edits, and removal. Browser checks cover category visibility, saving custom entries, and selling-switch persistence. Testing on the reporting server is still needed.
+
 ## 3.0.3
 
+- Website update checks now use content revisions rather than the plugin version. Plugin-only updates and line-ending differences no longer trigger website updates; changed bundles are detected even within the same plugin version. Existing files, customizations, and backups retain the manual-update behavior.
+- Added `/shop sellall hand` to sell all sellable stacks matching the held item across the inventory, using the existing `dynamicshop.use.sellall` permission. It preserves item-template checks, stock limits, pricing, cooldowns, and payment handling; plain `/shop sellall` still sells all sellable types.
 - Fixed `/shopadmin add item <price> [category]` ignoring the category for Oraxen, Nexo, ItemsAdder, and ValhallaMMO items. These entries now use the requested category (or the normal material category when omitted), persist it across reloads, and retain their custom delivery method. Existing entries can be moved by setting `special_items.<id>.category` and running `/shopadmin reload`.
 - Resolved Java formatting and compatibility findings and simplified command, transaction, GUI, pricing-data, and web-admin code without changing their intended behavior.
 - Removed duplicate configuration and message keys while retaining their effective values, and consolidated repeated stock, inflation, and trading-instruction lore.

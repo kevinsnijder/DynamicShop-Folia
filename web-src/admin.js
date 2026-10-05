@@ -175,7 +175,7 @@ const cfgSchema={
   const thumb=material=>/^[a-z0-9_]+$/i.test(material)?`<img class="pixel-item" src="https://mc.nerothe.com/img/1.21/minecraft_${material.toLowerCase()}.png" alt="" loading="lazy" onerror="this.hidden=true">`:`<span class="admin-custom-icon">${icon('cube')}</span>`;
   const input=(id,label,value='',extra='',hint='')=>`<label class="admin-field"><span>${label}</span><input id="${id}" value="${esc(value)}" ${extra}>${hint?`<small>${hint}</small>`:''}</label>`;
   const toggle=(id,label,value,hint='')=>`<label class="admin-toggle"><span><strong>${label}</strong>${hint?`<small>${hint}</small>`:''}</span><input id="${id}" type="checkbox" role="switch" ${value?'checked':''}></label>`;
-  const categoryOptions=(id)=>cats.filter(c=>!['PERMISSIONS','SERVER_SHOP','PLAYER_SHOPS'].includes(c.id)).map(c=>`<option value="${esc(c.id)}" ${id===c.id?'selected':''}>${esc(c.name)}${c.slot<0?' (hidden)':''}</option>`).join('');
+  const categoryOptions=(id)=>cats.filter(c=>!['PERMISSIONS','PLAYER_SHOPS'].includes(c.id)).map(c=>`<option value="${esc(c.id)}" ${id===c.id?'selected':''}>${esc(c.name)}${c.slot<0?' (hidden)':''}</option>`).join('');
   function log(){} // Mutations are audited by the server, never synthesized in the browser.
   function closeEditor(){dialog.close();}
   dialog.addEventListener('close',()=>document.body.style.overflow='');
@@ -189,11 +189,11 @@ const cfgSchema={
   function numeric(id,{optional=false,min=-Infinity,max=Infinity,integer=false}={}){const field=$(id);if(optional&&field.value.trim()==='')return null;const n=Number(field.value);if(!field.value.trim()||!Number.isFinite(n)||n<min||n>max||(integer&&!Number.isInteger(n)))throw new Error('Check '+field.closest('label')?.querySelector('span')?.textContent+'.');return n}
   async function loadAdmin(){
     const [rawItems,rawCats,config,extra,audit]=await Promise.all([api('/api/admin/items',{auth:true}),api('/api/admin/categories',{auth:true}),api('/api/admin/config',{auth:true}),api('/api/admin/entries',{auth:true}),api('/api/admin/audit',{auth:true})]);
-    items.splice(0,items.length,...rawItems.filter(i=>!i.item.includes(':')).map(i=>({...mapItem(i),material:i.item.toLowerCase(),adminCategory:i.category,basePrice:Math.max(0,i.basePrice),customName:i.customName||'',stockRate:i.stockRate,shortageHours:i.shortageHours,maxStock:i.maxStock,maxStockStorage:i.maxStockStorage,buyDisabled:i.buyDisabled,sellDisabled:i.sellDisabled,disabled:i.disabled})));
+    items.splice(0,items.length,...rawItems.filter(i=>!i.item.includes(':')||i.tradeItem).map(i=>({...mapItem(i),material:(i.material||i.item).toLowerCase(),tradeItem:!!i.tradeItem,adminCategory:i.category,basePrice:Math.max(0,i.basePrice),customName:i.customName||'',stockRate:i.stockRate,shortageHours:i.shortageHours,maxStock:i.maxStock,maxStockStorage:i.maxStockStorage,buyDisabled:i.buyDisabled,sellDisabled:i.sellDisabled,disabled:i.disabled})));
     cats.splice(0,cats.length,...rawCats.map(c=>({id:c.id,name:c.displayName,browse:c.displayName,material:c.icon.toLowerCase(),slot:c.slot,custom:c.isCustom,restock:c.restockTarget!==null,target:c.restockTarget??200,interval:c.restockInterval??30})));
     const slots=[20,21,22,23,24,29,30,31,32,33,40];
     defaults.splice(0,defaults.length,...rawCats.map((c,i)=>({id:c.id,name:c.defaultName,material:c.defaultIcon.toLowerCase(),slot:slots[i]??-1,restock:false,target:200,interval:30})));
-    state.config=config;state.specials=extra.entries.filter(e=>e.type!=='server');state.serverItems=extra.entries.filter(e=>e.type==='server');state.listings=extra.listings;state.audit=audit;
+    state.config=config;state.specials=extra.entries.filter(e=>e.type!=='server');state.serverItems=extra.entries.filter(e=>e.type==='server'&&!e.tradeItem);state.listings=extra.listings;state.audit=audit;
     if(state.cat&&!catById(state.cat))state.cat=null;
     $('adminMaterials').innerHTML=items.map(i=>`<option value="${esc(i.material.toUpperCase())}"></option>`).join('');
   }
@@ -217,10 +217,10 @@ const cfgSchema={
     const target=$('adminShopResults');
     if(!state.cat&&!query){
       target.innerHTML=`<div class="admin-section-intro"><div><h2>Your shop, at a glance</h2><p>Open a category to manage its items. Use the pencil to change its name, icon, or restock rules.</p></div><span>${items.length} items · ${cats.filter(c=>c.slot>=0).length} categories</span></div><div class="admin-category-grid">${cats.filter(c=>c.slot>=0).sort((a,b)=>a.slot-b.slot).map(c=>{
-        const list=c.id==='PERMISSIONS'?state.specials:c.id==='SERVER_SHOP'?state.serverItems:c.id==='PLAYER_SHOPS'?state.listings:catItems(c.id);
+        const list=c.id==='PERMISSIONS'?state.specials:c.id==='SERVER_SHOP'?(catItems(c.id).length?catItems(c.id):state.serverItems):c.id==='PLAYER_SHOPS'?state.listings:catItems(c.id);
         return `<article class="admin-category-card"><button class="admin-category-edit" data-edit-cat="${esc(c.id)}" aria-label="Edit ${esc(c.name)} category">${icon('edit')}</button><button class="admin-category-open" data-open-cat="${esc(c.id)}">${thumb(c.material)}<h3>${esc(c.name)}</h3><span>${esc(c.id)}</span><div class="admin-category-stats"><strong>${list.length} items</strong>${list.some(i=>i.disabled)?'<span>'+list.filter(i=>i.disabled).length+' disabled</span>':''}${c.restock?'<span class="positive">↻ '+c.interval+'m</span>':''}</div></button><div class="admin-category-foot"><span>Slot ${c.slot}</span><span>Manage items ↗</span></div></article>`
       }).join('')}<button class="admin-add-category" id="addCategoryCard"><span>+</span><strong>Create a category</strong><small>${cats.filter(c=>c.custom&&c.slot<0).length} custom slots available</small></button></div><details class="admin-hidden-categories"><summary>Hidden categories (${cats.filter(c=>c.slot<0).length})</summary><div>${cats.filter(c=>c.slot<0).map(c=>`<button class="secondary" data-edit-cat="${esc(c.id)}">${esc(c.name)} · hidden</button>`).join('')}</div></details>`;
-      document.querySelectorAll('[data-open-cat]').forEach(b=>b.onclick=()=>{const id=b.dataset.openCat;if(id==='PERMISSIONS')switchTab('permissions');else if(id==='SERVER_SHOP')switchTab('server');else if(id==='PLAYER_SHOPS')switchTab('players');else{state.cat=id;state.limit=40;state.checked.clear();renderShop()}});
+      document.querySelectorAll('[data-open-cat]').forEach(b=>b.onclick=()=>{const id=b.dataset.openCat;if(id==='PERMISSIONS')switchTab('permissions');else if(id==='SERVER_SHOP'&&!catItems(id).length)switchTab('server');else if(id==='PLAYER_SHOPS')switchTab('players');else{state.cat=id;state.limit=40;state.checked.clear();renderShop()}});
       document.querySelectorAll('[data-edit-cat]').forEach(b=>b.onclick=()=>editCategory(catById(b.dataset.editCat)));
       $('addCategoryCard').onclick=$('newAdminCategory').onclick;return;
     }
@@ -246,13 +246,13 @@ const cfgSchema={
       const body={basePrice:next.basePrice,stockRate:next.stockRate,maxStock:next.maxStock,maxStockStorage:next.maxStockStorage,shortageHours:next.shortageHours,category:next.adminCategory,disabled:next.disabled,buyDisabled:next.buyDisabled,sellDisabled:next.sellDisabled,displayName:$('aeName').value.trim()};
       if(next.stock!==null)body.stock=next.stock;
       if(isNew)await api('/api/admin/items/create',{auth:true,method:'POST',body:{material:material.toUpperCase(),basePrice:price,category:next.adminCategory}});
-      await api('/api/admin/item/'+encodeURIComponent(material.toUpperCase()),{auth:true,method:'POST',body});
+      await api('/api/admin/item/'+encodeURIComponent(isNew?material.toUpperCase():item.id),{auth:true,method:'POST',body});
       closeEditor();await refresh();notify('Saved '+next.name);
 
     });
     document.querySelectorAll('[data-stock-step]').forEach(b=>b.onclick=()=>{$('aeStock').value=(Number($('aeStock').value)||0)+Number(b.dataset.stockStep)});
     $('resetItemShortagePreview').onclick=()=>{$('aeShortage').value=0};
-    if(!isNew)$('removeAdminItem').onclick=()=>confirmAction('Remove '+item.name+'?','This disables the shop entry. You can enable it again from the admin item list.',async()=>{await api('/api/admin/item/'+encodeURIComponent(item.id),{auth:true,method:'DELETE'})});
+    if(!isNew)$('removeAdminItem').onclick=()=>confirmAction('Remove '+item.name+'?',''+(item.tradeItem?'This permanently removes the custom entry from the shop.':'This disables the shop entry. You can enable it again from the admin item list.')+'',async()=>{await api('/api/admin/item/'+encodeURIComponent(item.id),{auth:true,method:'DELETE'})});
   }
   function editCategory(cat,creating=false){
     const draft={...cat};if(creating){draft.slot=Array.from({length:54},(_,i)=>i).find(n=>!cats.some(c=>c.slot===n))??-1;draft.name='New category'}

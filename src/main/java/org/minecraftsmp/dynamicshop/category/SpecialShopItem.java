@@ -320,4 +320,12 @@ public class SpecialShopItem {
         return itemIdentifier != null && !itemIdentifier.isEmpty();
     }
 
+    /** Physical custom entries can be traded; commands and other rewards remain purchases. */
+    public boolean isTradeItem() {
+        if (!isServerShopItem() || deliveryMethod == null) return false;
+        return switch (deliveryMethod.toLowerCase(java.util.Locale.ROOT)) {
+            case "itemsadder", "nexo", "oraxen", "valhallammo", "stored_item" -> true;
+            default -> false;
+        };
+    }
 }

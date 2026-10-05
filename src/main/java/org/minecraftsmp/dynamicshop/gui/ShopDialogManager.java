@@ -63,12 +63,12 @@ public class ShopDialogManager {
         String itemName = ShopItemNames.getDisplayName(mat, deliveryOverride);
 
         double buyPrice1 =
-                variantId != null && variantBasePrice > 0
+                variantId != null && variantBasePrice >= 0
                         ? ShopDataManager.getTotalVariantBuyCost(
                                 variantId, mat, variantBasePrice, 1)
                         : ShopDataManager.getTotalBuyCost(mat, 1);
         double sellPrice1 =
-                variantId != null && variantBasePrice > 0
+                variantId != null && variantBasePrice >= 0
                         ? ShopDataManager.getTotalVariantSellValue(
                                 variantId, mat, variantBasePrice, 1)
                         : ShopDataManager.getTotalSellValue(mat, 1);

@@ -1,8 +1,8 @@
 package org.minecraftsmp.dynamicshop.listeners;
 
-import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,7 +14,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.enchantments.Enchantment;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
 import org.minecraftsmp.dynamicshop.category.SpecialShopItem;
@@ -28,11 +27,12 @@ import org.minecraftsmp.dynamicshop.gui.CategorySelectionGUI;
 import org.minecraftsmp.dynamicshop.gui.ItemActionGUI;
 import org.minecraftsmp.dynamicshop.gui.SearchResultsGUI;
 import org.minecraftsmp.dynamicshop.gui.ShopGUI;
-import org.minecraftsmp.dynamicshop.util.BedrockUtil;
-import org.minecraftsmp.dynamicshop.util.ShopItemNames;
 import org.minecraftsmp.dynamicshop.managers.ConfigCacheManager;
+import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.transactions.Transaction;
+import org.minecraftsmp.dynamicshop.util.BedrockUtil;
+import org.minecraftsmp.dynamicshop.util.ShopItemNames;
 
 import java.util.*;
 
@@ -280,6 +280,30 @@ public class ShopListener implements Listener {
 
         Material mat = clicked.getType();
 
+        SpecialShopItem custom =
+                plugin.getSpecialShopManager() == null
+                        ? null
+                        : plugin.getSpecialShopManager().findTradeItem(clicked);
+        if (custom != null) {
+            ShopGUI gui = openShop.get(p);
+            if (gui != null
+                    && gui.getCategory() != ItemCategory.MISC
+                    && gui.getCategory() != custom.getCategory()) {
+                p.sendMessage("§cYou can only sell items assigned to this category.");
+                return;
+            }
+            ItemStack template = plugin.getSpecialShopManager().getTradeTemplate(custom);
+            sellItem(
+                    p,
+                    mat,
+                    isShift ? Math.min(clicked.getAmount(), 64) : 1,
+                    gui != null ? gui : openSearch.get(p),
+                    template,
+                    custom.getPrice(),
+                    custom.getId());
+            return;
+        }
+
         if (!isSellMatch(clicked, mat, null)) {
             p.sendMessage(plugin.getMessageManager().cannotSell());
             return;
@@ -355,6 +379,10 @@ public class ShopListener implements Listener {
         if (cat == ItemCategory.PERMISSIONS || cat == ItemCategory.SERVER_SHOP) {
             SpecialShopItem sItem = gui.getSpecialItemFromSlot(slot);
             if (sItem == null) return;
+            if (sItem.isTradeItem()) {
+                handleRegularShopClick(p, gui, slot, right, shift);
+                return;
+            }
 
             if (right) {
                 p.sendMessage(plugin.getMessageManager().getMessage("cannot-sell-special-item"));
@@ -458,13 +486,23 @@ public class ShopListener implements Listener {
             ItemStack deliveryOverride,
             double variantBasePrice,
             String variantId) {
+        if (variantId != null && plugin.getSpecialShopManager() != null) {
+            var current = plugin.getSpecialShopManager().getSpecialItem(variantId);
+            ItemStack currentTemplate = plugin.getSpecialShopManager().getTradeTemplate(current);
+            if (currentTemplate == null || currentTemplate.getType() != mat) {
+                p.sendMessage("§cThis custom item has changed or is unavailable. Reopen the shop.");
+                return;
+            }
+            deliveryOverride = currentTemplate;
+            variantBasePrice = current.getPrice();
+        }
         if (!validatePurchase(p, mat, amount, variantId)) return;
 
         amount = limitBuyAmount(p, mat, amount, variantId);
         if (amount <= 0) return;
 
         double totalCost;
-        if (variantId != null && variantBasePrice > 0) {
+        if (variantId != null && variantBasePrice >= 0) {
             totalCost =
                     ShopDataManager.getTotalVariantBuyCost(
                             variantId, mat, variantBasePrice, amount);
@@ -517,7 +555,12 @@ public class ShopListener implements Listener {
                                 variantId != null ? "VARIANT:" + variantId : mat.name(),
                                 amount,
                                 totalCost,
-                                ShopDataManager.detectCategory(mat).name(),
+                                (variantId != null && plugin.getSpecialShopManager() != null
+                                                ? plugin.getSpecialShopManager()
+                                                        .getSpecialItem(variantId)
+                                                        .getCategory()
+                                                : ShopDataManager.detectCategory(mat))
+                                        .name(),
                                 ""));
 
         recordTransaction(p);
@@ -543,6 +586,16 @@ public class ShopListener implements Listener {
             ItemStack variantTemplate,
             double variantBasePrice,
             String variantId) {
+        if (variantId != null && plugin.getSpecialShopManager() != null) {
+            var current = plugin.getSpecialShopManager().getSpecialItem(variantId);
+            ItemStack currentTemplate = plugin.getSpecialShopManager().getTradeTemplate(current);
+            if (currentTemplate == null || currentTemplate.getType() != mat) {
+                p.sendMessage("§cThis custom item has changed or is unavailable. Reopen the shop.");
+                return;
+            }
+            variantTemplate = currentTemplate;
+            variantBasePrice = current.getPrice();
+        }
         if (!validateSale(p, mat, amount, variantId)) return;
 
         int removed = countSaleItems(p, mat, variantTemplate, amount);
@@ -609,7 +662,12 @@ public class ShopListener implements Listener {
                                     itemId,
                                     actuallyRemoved,
                                     totalPayout,
-                                    ShopDataManager.detectCategory(mat).name(),
+                                    (variantId != null && plugin.getSpecialShopManager() != null
+                                                    ? plugin.getSpecialShopManager()
+                                                            .getSpecialItem(variantId)
+                                                            .getCategory()
+                                                    : ShopDataManager.detectCategory(mat))
+                                            .name(),
                                     ""));
         }
 
@@ -928,7 +986,7 @@ public class ShopListener implements Listener {
         oneItem.setAmount(1);
         ItemStack oneTemplate = template.clone();
         oneTemplate.setAmount(1);
-        return oneItem.isSimilar(oneTemplate);
+        return oneTemplate.isSimilar(oneItem) && oneItem.isSimilar(oneTemplate);
     }
 
     /**
@@ -1177,7 +1235,7 @@ public class ShopListener implements Listener {
     }
 
     private double saleValue(Material mat, String variantId, double variantBasePrice, int amount) {
-        return variantId != null && variantBasePrice > 0
+        return variantId != null && variantBasePrice >= 0
                 ? ShopDataManager.getTotalVariantSellValue(variantId, mat, variantBasePrice, amount)
                 : ShopDataManager.getTotalSellValue(mat, amount);
     }
@@ -1202,7 +1260,7 @@ public class ShopListener implements Listener {
         String variantId = null;
 
         SpecialShopItem mixedSpecialItem = gui.getSpecialItemFromSlot(slot);
-        if (mixedSpecialItem != null && mixedSpecialItem.isServerShopItem()) {
+        if (mixedSpecialItem != null && !mixedSpecialItem.isTradeItem()) {
             if (right) {
                 p.sendMessage(plugin.getMessageManager().getMessage("cannot-sell-special-item"));
                 return;
@@ -1213,20 +1271,17 @@ public class ShopListener implements Listener {
             return;
         }
 
-        // If no regular item found, check for non-server stored_item variants in this category.
-        if (mat == null) {
-            SpecialShopItem sItem = mixedSpecialItem;
-            if (sItem != null
-                    && sItem.getDisplayMaterial() != null
-                    && "stored_item".equalsIgnoreCase(sItem.getDeliveryMethod())) {
-                mat = sItem.getDisplayMaterial();
-                variantBasePrice = sItem.getPrice();
-                variantId = sItem.getId();
-                ShopDataManager.initializeVariantData(variantId, mat);
-                // Load the specific stored ItemStack so the correct variant is delivered
-                String configPath = "special_items." + sItem.getId() + ".stored_item";
-                deliveryOverride = plugin.getConfig().getItemStack(configPath);
+        if (mat == null && mixedSpecialItem != null && mixedSpecialItem.isTradeItem()) {
+            deliveryOverride = plugin.getSpecialShopManager().getTradeTemplate(mixedSpecialItem);
+            if (deliveryOverride == null) {
+                p.sendMessage(
+                        "§cThis custom item is unavailable. Please contact an administrator.");
+                return;
             }
+            mat = deliveryOverride.getType();
+            variantBasePrice = mixedSpecialItem.getPrice();
+            variantId = mixedSpecialItem.getId();
+            ShopDataManager.initializeVariantData(variantId, mat);
         }
 
         if (mat == null) return;
@@ -1260,6 +1315,14 @@ public class ShopListener implements Listener {
         }
         if (!checkTransactionCooldown(p)) return false;
 
+        if (variantId != null && plugin.getSpecialShopManager() != null) {
+            if (!plugin.getSpecialShopManager().canTrade(p, variantId, true)) {
+                p.sendMessage("§cTrading this custom item is disabled or requires permission.");
+                return false;
+            }
+            return true;
+        }
+
         if (variantId == null && ShopDataManager.isItemDisabled(mat)) {
             p.sendMessage(plugin.getMessageManager().getMessage("out-of-stock"));
             return false;
@@ -1278,6 +1341,14 @@ public class ShopListener implements Listener {
             return false;
         }
         if (!checkTransactionCooldown(p)) return false;
+
+        if (variantId != null && plugin.getSpecialShopManager() != null) {
+            if (!plugin.getSpecialShopManager().canTrade(p, variantId, false)) {
+                p.sendMessage("§cTrading this custom item is disabled or requires permission.");
+                return false;
+            }
+            return true;
+        }
 
         if (variantId == null && ShopDataManager.isItemDisabled(mat)) {
             p.sendMessage(plugin.getMessageManager().cannotSell());

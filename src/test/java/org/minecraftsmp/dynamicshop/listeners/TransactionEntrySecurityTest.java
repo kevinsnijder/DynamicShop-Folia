@@ -1,11 +1,7 @@
 package org.minecraftsmp.dynamicshop.listeners;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import static org.junit.Assert.*;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -24,7 +20,13 @@ import org.minecraftsmp.dynamicshop.managers.PlayerShopManager;
 import org.minecraftsmp.dynamicshop.models.PlayerShopListing;
 import org.minecraftsmp.dynamicshop.support.PlainTestStack;
 import org.minecraftsmp.dynamicshop.support.PluginTestFixture;
-import static org.junit.Assert.*;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
 public class TransactionEntrySecurityTest {
     @Rule public TemporaryFolder directory = new TemporaryFolder();
@@ -56,10 +58,78 @@ public class TransactionEntrySecurityTest {
             ShopCommand command = new ShopCommand(plugin);
             assertTrue(command.onCommand(player, null, "shop", new String[] {"sellhand"}));
             assertTrue(command.onCommand(player, null, "shop", new String[] {"sellall"}));
+            assertTrue(command.onCommand(player, null, "shop", new String[] {"sellall", "hand"}));
             listener.buyItem(player, Material.DIAMOND, 1, null);
             listener.sellItem(player, Material.DIAMOND, 1, null);
         } finally {
             ConfigCacheManager.transactionCooldownMs = oldCooldown;
+        }
+    }
+
+    @Test
+    public void sellAllHandRequiresSellAllPermissionBeforeReadingInventory() throws Exception {
+        DynamicShop plugin = PluginTestFixture.plugin(directory.getRoot());
+        Player player =
+                PluginTestFixture.proxy(
+                        Player.class,
+                        (object, method, args) ->
+                                switch (method.getName()) {
+                                    case "hasPermission" ->
+                                            !args[0].equals("dynamicshop.use.sellall");
+                                    case "sendMessage" -> null;
+                                    default ->
+                                            throw new AssertionError(
+                                                    "Permission check must reject before "
+                                                            + method.getName());
+                                });
+        assertTrue(
+                new ShopCommand(plugin)
+                        .onCommand(player, null, "shop", new String[] {"sellall", "hand"}));
+    }
+
+    @Test
+    public void invalidSellAllArgumentsNeverReachInventoryOrEconomy() throws Exception {
+        DynamicShop plugin = PluginTestFixture.plugin(directory.getRoot());
+        Player player =
+                PluginTestFixture.proxy(
+                        Player.class,
+                        (object, method, args) ->
+                                switch (method.getName()) {
+                                    case "hasPermission" -> true;
+                                    case "sendMessage" -> null;
+                                    default ->
+                                            throw new AssertionError(
+                                                    "Invalid arguments must reject before "
+                                                            + method.getName());
+                                });
+        for (String[] args :
+                List.of(
+                        new String[] {"sellall", "hadn"},
+                        new String[] {"sellall", "hand", "extra"})) {
+            assertTrue(new ShopCommand(plugin).onCommand(player, null, "shop", args));
+        }
+    }
+
+    @Test
+    public void sellAllHandCompletionRespectsPrefixAndPermission() {
+        ShopCommand command = new ShopCommand(null);
+        for (boolean allowed : List.of(true, false)) {
+            Player player =
+                    PluginTestFixture.proxy(
+                            Player.class,
+                            (object, method, args) -> {
+                                if (method.getName().equals("hasPermission")) return allowed;
+                                throw new AssertionError(method.getName());
+                            });
+            for (String prefix : List.of("", "ha", "HAND")) {
+                assertEquals(
+                        allowed ? List.of("hand") : List.of(),
+                        command.onTabComplete(
+                                player, null, "shop", new String[] {"sellall", prefix}));
+            }
+            assertTrue(
+                    command.onTabComplete(player, null, "shop", new String[] {"sellall", "other"})
+                            .isEmpty());
         }
     }
 

@@ -6,7 +6,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-
 import org.bukkit.inventory.ItemStack;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
@@ -25,12 +24,10 @@ import java.util.Map;
 /**
  * /shop command
  *
- * Supported:
- * /shop
- * /shop <category>
+ * <p>Supported: /shop /shop <category>
  *
- * If no category is provided, opens the CategorySelectionGUI.
- * If category is provided, skip category GUI and go straight to ShopGUI.
+ * <p>If no category is provided, opens the CategorySelectionGUI. If category is provided, skip
+ * category GUI and go straight to ShopGUI.
  */
 public class ShopCommand implements CommandExecutor, TabCompleter {
 
@@ -65,13 +62,13 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             return handleSellHand(p);
         }
 
-        // Handle /shop sellall
+        // Handle /shop sellall [hand]
         if (args.length >= 1 && args[0].equalsIgnoreCase("sellall")) {
             if (!p.hasPermission("dynamicshop.use.sellall")) {
                 p.sendMessage(plugin.getMessageManager().noPermission());
                 return true;
             }
-            return handleSellAll(p);
+            return handleSellAll(p, args);
         }
 
         // Handle /shop sell <price> (player shop listing)
@@ -132,6 +129,14 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender s, Command cmd, String alias, String[] args) {
         List<String> out = new ArrayList<>();
 
+        if (args.length == 2
+                && args[0].equalsIgnoreCase("sellall")
+                && s.hasPermission("dynamicshop.use")
+                && s.hasPermission("dynamicshop.use.sellall")
+                && "hand".startsWith(args[1].toLowerCase(java.util.Locale.ROOT))) {
+            out.add("hand");
+        }
+
         // /shop <tab>
         if (args.length == 1) {
             // Add sell commands
@@ -172,36 +177,26 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     private boolean handleSellHand(Player p) {
         if (!plugin.getShopListener().checkTransactionCooldown(p)) return true;
         ItemStack held = p.getInventory().getItemInMainHand();
-        if (held == null || held.getType() == Material.AIR) {
-            p.sendMessage("§c✗ §7You're not holding anything!");
-            return true;
-        }
-
-        if (isDamaged(held)) {
-            p.sendMessage(plugin.getMessageManager().cannotSellDamaged());
-            return true;
-        }
-
+        SaleTarget custom = customSaleTarget(p, held);
+        if (custom == null && !canSellHeldItem(p, held)) return true;
+        SaleTarget target =
+                custom != null
+                        ? custom
+                        : new SaleTarget(
+                                held.getType(),
+                                null,
+                                null,
+                                ShopDataManager.getBasePrice(held.getType()));
         Material mat = held.getType();
         int amount = held.getAmount();
 
-        if (!isShopSellMatch(held, mat)) {
-            p.sendMessage(plugin.getMessageManager().cannotSell());
-            return true;
-        }
-
-        if (ShopDataManager.getBasePrice(mat) < 0) {
-            p.sendMessage(plugin.getMessageManager().cannotSell());
-            return true;
-        }
-
-        if (ShopDataManager.isSellDisabled(mat)) {
-            p.sendMessage("§cSelling this item is disabled.");
-            return true;
-        }
-
-        if (!ShopDataManager.canSell(mat, amount)) {
-            int limit = ShopDataManager.getSellLimit(mat);
+        if (!(target.variantId() == null
+                ? ShopDataManager.canSell(mat, amount)
+                : ShopDataManager.canSellVariant(target.variantId(), mat, amount))) {
+            int limit =
+                    (target.variantId() == null
+                            ? ShopDataManager.getSellLimit(mat)
+                            : ShopDataManager.getVariantSellLimit(target.variantId(), mat));
             if (limit <= 0) {
                 p.sendMessage("§cShop storage is full for this item.");
                 return true;
@@ -209,7 +204,7 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             amount = Math.min(amount, limit);
         }
 
-        double payout = ShopDataManager.getTotalSellValue(mat, amount);
+        double payout = saleValue(target, amount);
         if (!Double.isFinite(payout) || payout < 0) {
             p.sendMessage(plugin.getMessageManager().cannotSell());
             return true;
@@ -223,13 +218,14 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             held.setAmount(remaining);
         }
 
-        ShopDataManager.updateStock(mat, amount);
+        if (target.variantId() == null) ShopDataManager.updateStock(mat, amount);
+        else ShopDataManager.updateVariantStock(target.variantId(), amount);
         String currency = plugin.getEconomyManager().getCurrency(mat);
         plugin.getShopListener().recordTransaction(p);
-        String itemName = ShopItemNames.getDisplayName(mat);
+        String itemName = saleName(target.key());
         if (!plugin.getEconomyManager()
                 .depositSale(
-                        p, payout, currency, amount + "x " + itemName + " [" + mat.name() + "]"))
+                        p, payout, currency, amount + "x " + itemName + " [" + target.key() + "]"))
             return true;
 
         Map<String, String> ph = new HashMap<>();
@@ -243,21 +239,41 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                         Transaction.now(
                                 p.getName(),
                                 Transaction.TransactionType.SELL,
-                                mat.name(),
+                                target.key(),
                                 amount,
                                 payout,
-                                ShopDataManager.detectCategory(mat).name(),
+                                (target.variantId() == null
+                                                ? ShopDataManager.detectCategory(mat)
+                                                : plugin.getSpecialShopManager()
+                                                        .getSpecialItem(target.variantId())
+                                                        .getCategory())
+                                        .name(),
                                 ""));
 
         return true;
     }
 
     // --------------------------------------------------------------------
-    // SELL ALL: sell every sellable item in inventory
+    // SELL ALL: sell every sellable item, optionally restricted to the held type
     // --------------------------------------------------------------------
-    private boolean handleSellAll(Player p) {
+    private boolean handleSellAll(Player p, String[] args) {
+        if (args.length > 2 || (args.length == 2 && !args[1].equalsIgnoreCase("hand"))) {
+            p.sendMessage(plugin.getMessageManager().getMessage("sellall-usage"));
+            return true;
+        }
         if (!plugin.getShopListener().checkTransactionCooldown(p)) return true;
-        Map<Material, Integer> sellable = findSellableItems(p);
+        String onlyItem = null;
+        if (args.length == 2) {
+            ItemStack held = p.getInventory().getItemInMainHand();
+            SaleTarget custom = customSaleTarget(p, held);
+            if (custom == null && !canSellHeldItem(p, held)) return true;
+            onlyItem = custom != null ? custom.key() : held.getType().name();
+        }
+        return sellAllMatchingItems(p, onlyItem);
+    }
+
+    private boolean sellAllMatchingItems(Player p, String onlyItem) {
+        Map<String, Integer> sellable = findSellableItems(p, onlyItem);
 
         if (sellable.isEmpty()) {
             p.sendMessage("§c✗ §7You don't have any items to sell!");
@@ -268,7 +284,7 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         Map<String, List<Transaction>> salesByCurrency = new java.util.LinkedHashMap<>();
         int totalItems = 0;
 
-        for (Map.Entry<Material, Integer> entry : sellable.entrySet()) {
+        for (Map.Entry<String, Integer> entry : sellable.entrySet()) {
             totalItems += sellMaterial(p, entry, payoutsByCurrency, salesByCurrency);
         }
 
@@ -288,7 +304,7 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                 items.add(
                         sale.getAmount()
                                 + "x "
-                                + ShopItemNames.getDisplayName(Material.valueOf(sale.getItem()))
+                                + saleName(sale.getItem())
                                 + " ["
                                 + sale.getItem()
                                 + "]");
@@ -409,6 +425,27 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
+    private boolean canSellHeldItem(Player p, ItemStack held) {
+        if (held == null || held.getType() == Material.AIR) {
+            p.sendMessage("§c✗ §7You're not holding anything!");
+            return false;
+        }
+        if (isDamaged(held)) {
+            p.sendMessage(plugin.getMessageManager().cannotSellDamaged());
+            return false;
+        }
+        Material mat = held.getType();
+        if (!isShopSellMatch(held, mat) || ShopDataManager.getBasePrice(mat) < 0) {
+            p.sendMessage(plugin.getMessageManager().cannotSell());
+            return false;
+        }
+        if (ShopDataManager.isSellDisabled(mat)) {
+            p.sendMessage("§cSelling this item is disabled.");
+            return false;
+        }
+        return true;
+    }
+
     private boolean isShopSellMatch(ItemStack item, Material mat) {
         if (item == null || item.getType() != mat) {
             return false;
@@ -466,42 +503,99 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private Map<Material, Integer> findSellableItems(Player p) {
-        // Gather sellable materials and counts
-        Map<Material, Integer> sellable = new java.util.LinkedHashMap<>();
-
-        for (ItemStack item : p.getInventory().getContents()) {
-            if (item == null || item.getType() == Material.AIR) continue;
-            if (isDamaged(item)) continue;
-
-            Material mat = item.getType();
-            if (ShopDataManager.getBasePrice(mat) < 0) continue;
-            if (ShopDataManager.isSellDisabled(mat)) continue;
-            if (!isShopSellMatch(item, mat)) continue;
-
-            sellable.merge(mat, item.getAmount(), Integer::sum);
+    private record SaleTarget(Material mat, String variantId, ItemStack template, double price) {
+        String key() {
+            return variantId == null ? mat.name() : "VARIANT:" + variantId;
         }
+    }
 
+    private SaleTarget customSaleTarget(Player p, ItemStack stack) {
+        if (stack == null || isDamaged(stack) || plugin.getSpecialShopManager() == null)
+            return null;
+        var item = plugin.getSpecialShopManager().findTradeItem(stack);
+        if (item == null || !plugin.getSpecialShopManager().canTrade(p, item.getId(), false))
+            return null;
+        return new SaleTarget(
+                stack.getType(),
+                item.getId(),
+                plugin.getSpecialShopManager().getTradeTemplate(item),
+                item.getPrice());
+    }
+
+    private SaleTarget saleTarget(String key) {
+        if (key.startsWith("VARIANT:")) {
+            var item = plugin.getSpecialShopManager().getSpecialItem(key.substring(8));
+            ItemStack template = plugin.getSpecialShopManager().getTradeTemplate(item);
+            return new SaleTarget(template.getType(), item.getId(), template, item.getPrice());
+        }
+        Material mat = Material.valueOf(key);
+        return new SaleTarget(mat, null, null, ShopDataManager.getBasePrice(mat));
+    }
+
+    private String saleName(String key) {
+        return key.startsWith("VARIANT:")
+                ? plugin.getSpecialShopManager().getSpecialItem(key.substring(8)).getName()
+                : ShopItemNames.getDisplayName(Material.valueOf(key));
+    }
+
+    private boolean isTargetMatch(ItemStack item, SaleTarget target) {
+        return target.variantId() == null
+                ? isShopSellMatch(item, target.mat())
+                : item != null
+                        && target.template().isSimilar(item)
+                        && item.isSimilar(target.template());
+    }
+
+    private double saleValue(SaleTarget target, int amount) {
+        return target.variantId() == null
+                ? ShopDataManager.getTotalSellValue(target.mat(), amount)
+                : ShopDataManager.getTotalVariantSellValue(
+                        target.variantId(), target.mat(), target.price(), amount);
+    }
+
+    private Map<String, Integer> findSellableItems(Player p, String onlyItem) {
+        Map<String, Integer> sellable = new java.util.LinkedHashMap<>();
+        for (ItemStack item : p.getInventory().getContents()) {
+            if (item == null || item.getType() == Material.AIR || isDamaged(item)) continue;
+            SaleTarget custom = customSaleTarget(p, item);
+            String key;
+            if (custom != null) key = custom.key();
+            else {
+                Material mat = item.getType();
+                if (ShopDataManager.getBasePrice(mat) < 0
+                        || ShopDataManager.isSellDisabled(mat)
+                        || !isShopSellMatch(item, mat)) continue;
+                key = mat.name();
+            }
+            if (onlyItem == null || onlyItem.equals(key))
+                sellable.merge(key, item.getAmount(), Integer::sum);
+        }
         return sellable;
     }
 
     private int sellMaterial(
             Player p,
-            Map.Entry<Material, Integer> entry,
+            Map.Entry<String, Integer> entry,
             Map<String, Double> payoutsByCurrency,
             Map<String, List<Transaction>> salesByCurrency) {
-        Material mat = entry.getKey();
+        SaleTarget target = saleTarget(entry.getKey());
+        Material mat = target.mat();
         int amount = entry.getValue();
 
         // Check stock limits
-        if (!ShopDataManager.canSell(mat, amount)) {
-            int limit = ShopDataManager.getSellLimit(mat);
+        if (!(target.variantId() == null
+                ? ShopDataManager.canSell(mat, amount)
+                : ShopDataManager.canSellVariant(target.variantId(), mat, amount))) {
+            int limit =
+                    (target.variantId() == null
+                            ? ShopDataManager.getSellLimit(mat)
+                            : ShopDataManager.getVariantSellLimit(target.variantId(), mat));
             if (limit <= 0) return 0;
             amount = Math.min(amount, limit);
         }
 
         if (amount <= 0) return 0;
-        double quote = ShopDataManager.getTotalSellValue(mat, amount);
+        double quote = saleValue(target, amount);
         String currency = plugin.getEconomyManager().getCurrency(mat);
         if (!Double.isFinite(quote)
                 || quote < 0
@@ -509,12 +603,12 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             return 0;
         Map<Integer, ItemStack> originalSlots = new HashMap<>();
         // Remove items from inventory
-        int actuallySold = removeSellableItems(p, mat, amount, originalSlots);
+        int actuallySold = removeSellableItems(p, target, amount, originalSlots);
         if (actuallySold <= 0) {
             return 0;
         }
 
-        double payout = ShopDataManager.getTotalSellValue(mat, actuallySold);
+        double payout = saleValue(target, actuallySold);
         if (!Double.isFinite(payout)
                 || payout < 0
                 || !Double.isFinite(payoutsByCurrency.getOrDefault(currency, 0.0) + payout)) {
@@ -522,7 +616,8 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             return 0;
         }
 
-        ShopDataManager.updateStock(mat, actuallySold);
+        if (target.variantId() == null) ShopDataManager.updateStock(mat, actuallySold);
+        else ShopDataManager.updateVariantStock(target.variantId(), actuallySold);
         payoutsByCurrency.merge(currency, payout, Double::sum);
 
         salesByCurrency
@@ -531,20 +626,25 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                         Transaction.now(
                                 p.getName(),
                                 Transaction.TransactionType.SELL,
-                                mat.name(),
+                                target.key(),
                                 actuallySold,
                                 payout,
-                                ShopDataManager.detectCategory(mat).name(),
+                                (target.variantId() == null
+                                                ? ShopDataManager.detectCategory(mat)
+                                                : plugin.getSpecialShopManager()
+                                                        .getSpecialItem(target.variantId())
+                                                        .getCategory())
+                                        .name(),
                                 ""));
         return actuallySold;
     }
 
     private int removeSellableItems(
-            Player p, Material mat, int amount, Map<Integer, ItemStack> originalSlots) {
+            Player p, SaleTarget target, int amount, Map<Integer, ItemStack> originalSlots) {
         int toRemove = amount;
         for (int i = 0; i < p.getInventory().getSize(); i++) {
             ItemStack item = p.getInventory().getItem(i);
-            if (isShopSellMatch(item, mat) && !isDamaged(item) && toRemove > 0) {
+            if (isTargetMatch(item, target) && !isDamaged(item) && toRemove > 0) {
                 originalSlots.put(i, item.clone());
                 int take = Math.min(item.getAmount(), toRemove);
                 int newAmt = item.getAmount() - take;

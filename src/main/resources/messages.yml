@@ -23,6 +23,7 @@ messages:
   cannot-sell: "&cThis item cannot be sold."
   no-item-to-sell: "&cYou don't have any &e{item} &cto sell."
   cannot-sell-damaged: "&cYou cannot sell damaged items."
+  sellall-usage: "&cUsage: /shop sellall [hand]"
 
   # Category messages
   category-opened: "&aOpened category: &e{category}"

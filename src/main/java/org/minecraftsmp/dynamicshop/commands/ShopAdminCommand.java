@@ -273,9 +273,7 @@ public class ShopAdminCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(
                         Boolean.TRUE.equals(status.get("needsUpdate"))
                                 ? "§eWebsite update available. Run /shopadmin webupdate to back up and install the bundled files."
-                                : "§aWebsite files are up to date (v"
-                                        + status.get("version")
-                                        + ").");
+                                : "§aWebsite files are up to date.");
             } else {
                 var result = web.webFiles().update();
                 sender.sendMessage(

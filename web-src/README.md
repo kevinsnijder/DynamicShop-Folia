@@ -2,11 +2,15 @@
 
 This directory contains the production website source. It uses the plugin's live API; the separate GitHub Pages demo remains a local-data demonstration.
 
-Run `node web-src/build.cjs` from the repository root after editing these files. Commit the generated files in `src/main/resources/web/` too. Maven packages those generated files, so building the plugin does not require Node.js. Maven replaces only explicit @project.version@ markers; JavaScript ${...} expressions must remain untouched. The user-facing version for this release is **v3.0.2**, and the plugin version is **3.0.2**.
+Run `node web-src/build.cjs` from the repository root after editing these files. Commit the generated files in `src/main/resources/web/` too. Maven packages those generated files, so building the plugin does not require Node.js. Generated assets contain SHA-256 content revisions independent of the plugin version. JavaScript ${...} expressions and generated revision markers must remain untouched during packaging.
+
+The builder removes old version-marker lines and normalizes BOMs and line endings before hashing. Each file gets its own `DS-WEB-VERSION: sha256-...` marker. Changing Java code or the Maven version does not change those revisions. JavaScript and CSS changes also update the cache keys in `index.html`. Add any new bundled asset to both the builder and `WebFileManager.FILES` so it participates in installation and updates.
 
 ## Upgrading an existing server
 
-Install the new JAR and restart the server. Existing web files are retained by default. Administrators with `dynamicshop.admin` (operators by default) are notified on joining if the bundled website is newer.
+Install the new JAR and restart the server. Existing web files are retained by default. Startup logs and the web admin updater report an update when bundled content changes or installed files are missing, independently of the plugin version.
+
+For older installations, the checker compares file contents while ignoring legacy plugin-version markers, BOMs, and line endings. Identical files do not need an update merely to acquire the new markers. With content revision markers installed, local edits keep their original revision and do not trigger an update warning until the bundled revision changes. Legacy files with custom edits may need a one-time update because their original content revision cannot be identified. Updates continue to back up custom edits before replacing them.
 
 - `/shopadmin webupdate check` checks the installed files.
 - `/shopadmin webupdate` backs up and installs all bundled web files. It also works from the console.

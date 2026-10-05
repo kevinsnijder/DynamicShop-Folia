@@ -147,6 +147,7 @@ public class ShopDataManagerValidationTest {
             ConfigCacheManager.sellTaxPercent = Double.NaN;
             new ShopCommand(plugin).onCommand(player, null, "shop", new String[] {"sellhand"});
             new ShopCommand(plugin).onCommand(player, null, "shop", new String[] {"sellall"});
+            new ShopCommand(plugin).onCommand(player, null, "shop", new String[] {"sellall", "hand"});
             listener.sellItem(player, Material.DIAMOND, 10, null);
             assertEquals(10, held.getAmount());
             assertEquals(100, ShopDataManager.getStock(Material.DIAMOND), 0);

@@ -3,6 +3,8 @@ package org.minecraftsmp.dynamicshop.web;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -30,21 +32,25 @@ public final class WebFileManager {
 
     public synchronized Map<String, Object> status() throws IOException {
         List<String> outdated = new ArrayList<>();
-        String version = "unknown";
+        Map<String, String> revisions = new TreeMap<>();
         for (String name : FILES) {
             try (InputStream in = resources.apply("web/" + name)) {
                 if (in == null) throw new IOException("Bundled web file missing: " + name);
-                String expected = version(in.readAllBytes());
-                if (name.equals("index.html")) version = expected;
+                String expected = contentRevision(in.readAllBytes());
+                revisions.put(name, expected);
                 Path target = data.resolve("web").resolve(name);
                 if (!Files.isRegularFile(target)
-                        || expected.equals("unknown")
-                        || !expected.equals(version(Files.readAllBytes(target))))
+                        || !matchesRevision(expected, Files.readAllBytes(target)))
                     outdated.add(name);
             }
         }
         return Map.of(
-                "version", version, "needsUpdate", !outdated.isEmpty(), "outdatedFiles", outdated);
+                "version",
+                bundleRevision(revisions),
+                "needsUpdate",
+                !outdated.isEmpty(),
+                "outdatedFiles",
+                outdated);
     }
 
     public synchronized void installMissing() throws IOException {
@@ -99,6 +105,8 @@ public final class WebFileManager {
                 }
             throw error;
         }
+        Map<String, String> revisions = new TreeMap<>();
+        bundled.forEach((name, bytes) -> revisions.put(name, contentRevision(bytes)));
         return Map.of(
                 "success",
                 true,
@@ -107,7 +115,7 @@ public final class WebFileManager {
                 "files",
                 FILES.size(),
                 "version",
-                version(bundled.get("index.html")));
+                bundleRevision(revisions));
     }
 
     private void replace(Path target, byte[] bytes) throws IOException {
@@ -134,5 +142,40 @@ public final class WebFileManager {
         return start < 0
                 ? "unknown"
                 : line.substring(start + 15).replace("-->", "").replace("*/", "").trim();
+    }
+
+    private static boolean matchesRevision(String expected, byte[] installed) {
+        // A matching content marker identifies the installed bundle even after local edits.
+        // Old plugin-version markers fall back to comparing the actual file contents.
+        return expected.equals(version(installed)) || expected.equals(contentRevision(installed));
+    }
+
+    static String contentRevision(byte[] bytes) {
+        String text =
+                new String(bytes, StandardCharsets.UTF_8)
+                        .replaceFirst("^\\uFEFF", "")
+                        .replace("\r\n", "\n")
+                        .replace('\r', '\n');
+        text = text.replaceFirst("^(?://|/\\*|<!--)\\s*DS-WEB-VERSION:[^\\n]*(?:\\n|$)", "");
+        return "sha256-" + digest(text);
+    }
+
+    private static String bundleRevision(Map<String, String> revisions) {
+        StringBuilder contents = new StringBuilder();
+        revisions.forEach(
+                (name, revision) ->
+                        contents.append(name).append(':').append(revision).append('\n'));
+        return "web-" + digest(contents.toString()).substring(0, 12);
+    }
+
+    private static String digest(String text) {
+        try {
+            return HexFormat.of()
+                    .formatHex(
+                            MessageDigest.getInstance("SHA-256")
+                                    .digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
     }
 }

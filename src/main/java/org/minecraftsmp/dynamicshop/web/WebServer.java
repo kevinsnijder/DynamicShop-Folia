@@ -2,10 +2,15 @@ package org.minecraftsmp.dynamicshop.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JavalinJackson;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -14,18 +19,14 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
-import org.minecraftsmp.dynamicshop.managers.ConfigCacheManager;
 import org.minecraftsmp.dynamicshop.managers.CategoryConfigManager;
+import org.minecraftsmp.dynamicshop.managers.ConfigCacheManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
-import org.minecraftsmp.dynamicshop.util.ShopItemNames;
-import org.minecraftsmp.dynamicshop.transactions.Transaction;
 import org.minecraftsmp.dynamicshop.models.PlayerShopListing;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.minecraftsmp.dynamicshop.transactions.Transaction;
+import org.minecraftsmp.dynamicshop.util.ShopItemNames;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -420,7 +421,8 @@ public class WebServer {
             if (Boolean.TRUE.equals(webFileManager.status().get("needsUpdate")))
                 plugin.getLogger()
                         .warning(
-                                "Website update available. Run /shopadmin webupdate to back up and update the installed web files.");
+                                "Website update available. Run /shopadmin webupdate to back up and"
+                                    + " update the installed web files.");
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Could not prepare website files", e);
         }
@@ -1293,6 +1295,10 @@ public class WebServer {
         // Add Special Items
         for (org.minecraftsmp.dynamicshop.category.SpecialShopItem specialItem :
                 plugin.getSpecialShopManager().getAllSpecialItems().values()) {
+            if (specialItem.isTradeItem()) {
+                items.add(buildCustomAdminItemMap(specialItem));
+                continue;
+            }
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("item", "special:" + specialItem.getId());
             item.put(
@@ -1362,6 +1368,10 @@ public class WebServer {
     private void handleAdminItemDetail(Context ctx) {
         if (ctx.statusCode() == 401) return;
 
+        if (ctx.pathParam("item").startsWith("special:")) {
+            handleCustomAdminItem(ctx, "detail");
+            return;
+        }
         Material mat = Material.matchMaterial(ctx.pathParam("item"));
         if (mat == null || !ShopDataManager.getAllTrackedMaterials().contains(mat)) {
             ctx.status(404).json(Map.of("error", "Item not found"));
@@ -1378,6 +1388,10 @@ public class WebServer {
     private void handleAdminItemUpdate(Context ctx) {
         if (ctx.statusCode() == 401) return;
 
+        if (ctx.pathParam("item").startsWith("special:")) {
+            handleCustomAdminItem(ctx, "update");
+            return;
+        }
         Material mat = Material.matchMaterial(ctx.pathParam("item"));
         if (mat == null || !ShopDataManager.getAllTrackedMaterials().contains(mat)) {
             ctx.status(404).json(Map.of("error", "Item not found"));
@@ -1465,8 +1479,18 @@ public class WebServer {
             return;
         }
 
+        List<org.minecraftsmp.dynamicshop.category.SpecialShopItem> customItems = new ArrayList<>();
         List<Material> materialsToUpdate = new ArrayList<>();
         for (String itemName : items) {
+            if (itemName.startsWith("special:")) {
+                var custom = plugin.getSpecialShopManager().getSpecialItem(itemName.substring(8));
+                if (custom == null || !custom.isTradeItem()) {
+                    ctx.status(404).json(Map.of("error", "Custom item not found"));
+                    return;
+                }
+                customItems.add(custom);
+                continue;
+            }
             Material mat = Material.matchMaterial(itemName);
             if (mat != null && ShopDataManager.getAllTrackedMaterials().contains(mat)) {
                 materialsToUpdate.add(mat);
@@ -1477,6 +1501,9 @@ public class WebServer {
                 ctx,
                 () -> {
                     validateBulkStock(materialsToUpdate, updates);
+                    for (var custom : customItems) validateCustomItemUpdate(custom, updates);
+                    for (var custom : customItems) applyCustomItemUpdate(custom, updates);
+                    if (!customItems.isEmpty()) plugin.getSpecialShopManager().reload();
                     for (Material mat : materialsToUpdate) {
                         if (updates.containsKey("stock"))
                             ShopDataManager.setStockDirect(
@@ -1502,7 +1529,7 @@ public class WebServer {
                 "bulk_item_update",
                 items.size() + " items",
                 updates.toString());
-        ctx.json(Map.of("success", true, "updated", materialsToUpdate.size()));
+        ctx.json(Map.of("success", true, "updated", materialsToUpdate.size() + customItems.size()));
     }
 
     /**
@@ -1936,6 +1963,10 @@ public class WebServer {
      */
     private void handleAdminItemRemove(Context ctx) {
         if (ctx.statusCode() == 401) return;
+        if (ctx.pathParam("item").startsWith("special:")) {
+            handleCustomAdminItem(ctx, "remove");
+            return;
+        }
         Material mat = Material.matchMaterial(ctx.pathParam("item"));
         if (mat == null || ShopDataManager.getBasePrice(mat) < 0) {
             ctx.status(404).json(Map.of("error", "Item not in shop"));
@@ -2269,6 +2300,15 @@ public class WebServer {
                             }
                             for (var item :
                                     plugin.getSpecialShopManager().getAllSpecialItems().values()) {
+                                if (plugin.getSpecialShopManager()
+                                        .isTradeDisabled(item.getId(), "disabled")) continue;
+                                if (item.isTradeItem()) {
+                                    Map<String, Object> row = buildCustomAdminItemMap(item);
+                                    row.put("kind", "custom");
+                                    row.put("historyId", "VARIANT:" + item.getId());
+                                    list.add(row);
+                                    continue;
+                                }
                                 Map<String, Object> row = new LinkedHashMap<>();
                                 row.put("item", "special:" + item.getId());
                                 row.put("displayName", item.getName());
@@ -2377,6 +2417,8 @@ public class WebServer {
                                 Map<String, Object> row = new LinkedHashMap<>();
                                 String path = "special_items." + item.getId() + ".";
                                 row.put("id", item.getId());
+                                row.put("tradeItem", item.isTradeItem());
+                                row.put("category", item.getCategory().name());
                                 row.put("name", item.getName());
                                 row.put("price", item.getPrice());
                                 row.put("material", item.getDisplayMaterial().name());
@@ -2574,6 +2616,145 @@ public class WebServer {
     private record RecentTrader(String playerName, String timestamp, int amount, double price) {}
 
     private record CategoryDTO(String id, String displayName, long itemCount) {}
+
+    private Map<String, Object> buildCustomAdminItemMap(
+            org.minecraftsmp.dynamicshop.category.SpecialShopItem item) {
+        String id = item.getId();
+        Material mat = item.getMaterial() != null ? item.getMaterial() : item.getDisplayMaterial();
+        var cfg = ShopDataManager.getVariantConfig(id, mat);
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("item", "special:" + id);
+        row.put("tradeItem", true);
+        row.put("material", mat.name());
+        row.put("displayName", item.getName());
+        row.put("customName", item.getName());
+        row.put("category", item.getCategory().name());
+        row.put("categoryDisplayName", getCategoryDisplayName(item.getCategory()));
+        row.put("basePrice", item.getPrice());
+        row.put("buyPrice", ShopDataManager.getTotalVariantBuyCost(id, mat, item.getPrice(), 1));
+        row.put("sellPrice", ShopDataManager.getTotalVariantSellValue(id, mat, item.getPrice(), 1));
+        row.put("stock", ShopDataManager.getVariantStock(id));
+        row.put(
+                "stockRate",
+                cfg.stockRate() != null
+                        ? cfg.stockRate()
+                        : ConfigCacheManager.negativeStockPercentPerItem);
+        row.put("maxStock", cfg.maxStock());
+        row.put("maxStockStorage", cfg.maxStockStorage());
+        row.put("shortageHours", ShopDataManager.getVariantShortageHours(id));
+        row.put(
+                "priceIncreasePercent",
+                ShopDataManager.getInflationIncreasePercent(
+                        ShopDataManager.getVariantShortageHours(id)));
+        row.put("buyDisabled", cfg.disableBuy());
+        row.put("sellDisabled", cfg.disableSell());
+        row.put("disabled", plugin.getSpecialShopManager().isTradeDisabled(id, "disabled"));
+        row.put(
+                "imageUrl",
+                "https://mc.nerothe.com/img/1.21/minecraft_"
+                        + mat.name().toLowerCase(Locale.ROOT)
+                        + ".png");
+        return row;
+    }
+
+    private void handleCustomAdminItem(Context ctx, String action) {
+        String id = ctx.pathParam("item").substring(8);
+        var item = plugin.getSpecialShopManager().getSpecialItem(id);
+        if (item == null || !item.isTradeItem()) {
+            ctx.status(404).json(Map.of("error", "Custom item not found"));
+            return;
+        }
+        if (action.equals("detail")) {
+            ctx.json(buildCustomAdminItemMap(item));
+            return;
+        }
+        Map<String, Object> body;
+        try {
+            body = action.equals("remove") ? Map.of() : ctx.bodyAsClass(Map.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "Invalid JSON body"));
+            return;
+        }
+        if (!runSyncAdminTask(
+                ctx,
+                () -> {
+                    if (action.equals("remove"))
+                        plugin.getSpecialShopManager().removeSpecialItem(id);
+                    else {
+                        validateCustomItemUpdate(item, body);
+                        applyCustomItemUpdate(item, body);
+                        plugin.getSpecialShopManager().reload();
+                    }
+                    ShopDataManager.saveDynamicData();
+                    invalidateShopItemsCache();
+                })) return;
+        auditLog.log(getAdminUsername(ctx), "custom_item_" + action, id, body.toString());
+        ctx.json(Map.of("success", true));
+    }
+
+    private void validateCustomItemUpdate(
+            org.minecraftsmp.dynamicshop.category.SpecialShopItem item, Map<String, Object> body) {
+        validateItemUpdate(body);
+        for (String flag : List.of("disabled", "buyDisabled", "sellDisabled"))
+            if (body.containsKey(flag) && !(body.get(flag) instanceof Boolean))
+                throw new IllegalArgumentException("Invalid " + flag);
+        if (body.containsKey("displayName") && !(body.get("displayName") instanceof String))
+            throw new IllegalArgumentException("Invalid displayName");
+        String path = "special_items." + item.getId() + ".";
+        Object cap =
+                body.containsKey("maxStockStorage")
+                        ? body.get("maxStockStorage")
+                        : plugin.getConfig().get(path + "max-stock-storage");
+        double stock =
+                body.get("stock") instanceof Number n
+                        ? n.doubleValue()
+                        : ShopDataManager.getVariantStock(item.getId());
+        if (cap instanceof Number n && stock > n.doubleValue())
+            throw new IllegalArgumentException("Stock exceeds the storage limit");
+        if (cap instanceof Number n && n.doubleValue() != Math.rint(n.doubleValue()))
+            throw new IllegalArgumentException("Storage limit must be a whole number");
+    }
+
+    private void applyCustomItemUpdate(
+            org.minecraftsmp.dynamicshop.category.SpecialShopItem item, Map<String, Object> body) {
+        String id = item.getId(), path = "special_items." + id + ".";
+        Map<String, String> keys =
+                Map.of(
+                        "basePrice",
+                        "price",
+                        "stockRate",
+                        "stock-rate",
+                        "maxStock",
+                        "max-stock",
+                        "maxStockStorage",
+                        "max-stock-storage",
+                        "disabled",
+                        "disabled",
+                        "buyDisabled",
+                        "disable-buy",
+                        "sellDisabled",
+                        "disable-sell",
+                        "category",
+                        "category",
+                        "displayName",
+                        "name");
+        for (var key : keys.entrySet())
+            if (body.containsKey(key.getKey())) {
+                Object value = body.get(key.getKey());
+                if (key.getKey().equals("category"))
+                    value = ((String) value).toUpperCase(Locale.ROOT);
+                if (key.getKey().equals("displayName") && ((String) value).isBlank()) value = id;
+                plugin.getConfig().set(path + key.getValue(), value);
+            }
+        ShopDataManager.initializeVariantData(id, item.getDisplayMaterial());
+        if (body.get("stock") instanceof Number n)
+            ShopDataManager.setVariantStockDirect(id, n.doubleValue());
+        if (body.get("shortageHours") instanceof Number n) {
+            ShopDataManager.setVariantShortageHours(id, n.doubleValue());
+            ShopDataManager.setVariantLastUpdate(id, System.currentTimeMillis());
+        }
+        plugin.saveConfig();
+    }
 
     private void validateItemUpdate(Map<String, Object> body) {
         for (String field : List.of("basePrice", "stockRate", "shortageHours"))

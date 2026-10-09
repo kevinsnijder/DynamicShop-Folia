@@ -2,8 +2,12 @@ package org.minecraftsmp.dynamicshop.gui;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.minecraftsmp.dynamicshop.DynamicShop;
@@ -11,7 +15,6 @@ import org.minecraftsmp.dynamicshop.category.ItemCategory;
 import org.minecraftsmp.dynamicshop.managers.CategoryConfigManager;
 import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
-import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,6 +74,14 @@ public class CategorySelectionGUI {
         ItemMeta meta = item.getItemMeta();
 
         if (meta != null) {
+            // Menu-only icons need explicit modifiers for Paper to hide vanilla tool stats.
+            if (!meta.hasAttributeModifiers()) {
+                meta.addAttributeModifier(Attribute.LUCK, new AttributeModifier(
+                        new NamespacedKey(plugin, "category_icon_tooltip"), 0,
+                        AttributeModifier.Operation.ADD_NUMBER));
+            }
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+
             // Apply colors if present
             String formattedName = displayName.contains("&")
                     ? displayName

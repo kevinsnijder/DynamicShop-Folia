@@ -1,6 +1,7 @@
 package org.minecraftsmp.dynamicshop.placeholder;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -8,11 +9,21 @@ import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.transactions.Transaction;
 
+import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.Map;
 
 public class DynamicShopExpansion extends PlaceholderExpansion {
 
     private final DynamicShop plugin;
+    // Longer names must precede their prefixes (e.g. times_bought_quantity vs times_bought).
+    private static final String[] ITEM_STATS = {
+        "times_bought_quantity", "times_sold_quantity", "times_bought", "times_sold",
+        "timesbought", "timessold", "displayname", "net_flow", "net"
+    };
+    private static final String[] PLAYER_STATS = {
+        "total_spent", "total_earned", "purchases", "sales"
+    };
 
     public DynamicShopExpansion(DynamicShop plugin) {
         this.plugin = plugin;
@@ -38,9 +49,21 @@ public class DynamicShopExpansion extends PlaceholderExpansion {
         return true;
     }
 
-    public @Nullable String onPlaceholderRequest(OfflinePlayer p, @NotNull String id) {
+    @Override
+    public @Nullable String onRequest(OfflinePlayer p, @NotNull String id) {
 
-        id = id.toLowerCase();
+        id = id.toLowerCase(Locale.ROOT);
+
+        // Read the live stock, preserving material names such as GOLD_INGOT.
+        if (id.startsWith("stock_")) {
+            try {
+                Material material = Material.valueOf(id.substring("stock_".length()).toUpperCase(Locale.ROOT));
+                double stock = ShopDataManager.getStock(material);
+                return Double.isFinite(stock) ? BigDecimal.valueOf(stock).stripTrailingZeros().toPlainString() : "0";
+            } catch (IllegalArgumentException e) {
+                return "0";
+            }
+        }
 
         // ------------------------------
         // Global Stats
@@ -58,13 +81,13 @@ public class DynamicShopExpansion extends PlaceholderExpansion {
                 Transaction last = plugin.getTransactionLogger().getMostRecentTransaction();
                 return last == null ? "None"
                         : String.format(
-                                "%s | %s %s %dx %s | $%.2f",
+                                "%s | %s %s %dx %s | %s",
                                 last.getTimestamp(),
                                 last.getPlayerName(),
                                 last.getType().name(),
                                 last.getAmount(),
                                 last.getItem(),
-                                last.getPrice());
+                                plugin.getEconomyManager().format(last.getPrice()));
 
             case "most_traded_item":
                 return plugin.getTransactionLogger().getMostTradedItem();
@@ -75,19 +98,20 @@ public class DynamicShopExpansion extends PlaceholderExpansion {
         // dynamicshop_player_<name>_<stat>
         // ------------------------------
         if (id.startsWith("player_")) {
-            // player_swiftxx_purchases
-            String[] parts = id.split("_");
-            if (parts.length < 3)
+            String request = id.substring("player_".length());
+            int separator = request.lastIndexOf('_');
+            if (separator < 1 || separator == request.length() - 1)
                 return "invalid_format";
 
-            String player = parts[1];
-            String stat = parts[2];
-
-            Map<String, Object> stats = plugin.getTransactionLogger().getPlayerStats(player);
-            if (stats == null)
-                return "0";
-
-            return String.valueOf(stats.getOrDefault(stat, "0"));
+            for (String stat : PLAYER_STATS) {
+                String suffix = "_" + stat;
+                if (!request.endsWith(suffix)) continue;
+                String player = request.substring(0, request.length() - suffix.length());
+                if (player.isEmpty()) return "invalid_format";
+                Map<String, Object> stats = plugin.getTransactionLogger().getPlayerStats(player);
+                return stats == null ? "0" : String.valueOf(stats.getOrDefault(stat, "0"));
+            }
+            return "0";
         }
 
         // ------------------------------
@@ -95,33 +119,35 @@ public class DynamicShopExpansion extends PlaceholderExpansion {
         // dynamicshop_item_<stat>_<identifier>
         // ------------------------------
         if (id.startsWith("item_")) {
-            String[] parts = id.split("_");
-            if (parts.length < 3)
+            String request = id.substring("item_".length());
+            int separator = request.indexOf('_');
+            if (separator < 1 || separator == request.length() - 1)
                 return "invalid_format";
 
-            String stat = parts[1];
-            String identifier = parts[2].toUpperCase();
-
-            ShopDataManager.ItemStats s = ShopDataManager.getStats(identifier);
-            if (s == null)
-                return "0";
-
-            switch (stat) {
-                case "displayname":
-                    return s.displayName;
-                case "timesbought":
-                case "times_bought":
-                    return String.valueOf(s.timesBought);
-                case "timessold":
-                case "times_sold":
-                    return String.valueOf(s.timesSold);
-                case "times_bought_quantity":
-                    return String.valueOf(s.quantityBought);
-                case "times_sold_quantity":
-                    return String.valueOf(s.quantitySold);
-                case "net":
-                case "net_flow":
-                    return String.valueOf(s.getNetFlow());
+            for (String stat : ITEM_STATS) {
+                String prefix = stat + "_";
+                if (!request.startsWith(prefix)) continue;
+                String identifier = request.substring(prefix.length()).toUpperCase(Locale.ROOT);
+                if (identifier.isEmpty()) return "invalid_format";
+                ShopDataManager.ItemStats s = ShopDataManager.getStats(identifier);
+                if (s == null) return "0";
+                switch (stat) {
+                    case "displayname":
+                        return s.displayName;
+                    case "timesbought":
+                    case "times_bought":
+                        return String.valueOf(s.timesBought);
+                    case "timessold":
+                    case "times_sold":
+                        return String.valueOf(s.timesSold);
+                    case "times_bought_quantity":
+                        return String.valueOf(s.quantityBought);
+                    case "times_sold_quantity":
+                        return String.valueOf(s.quantitySold);
+                    case "net":
+                    case "net_flow":
+                        return String.valueOf(s.getNetFlow());
+                }
             }
         }
 

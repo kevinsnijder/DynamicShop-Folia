@@ -406,8 +406,11 @@ public class DynamicShop extends JavaPlugin {
 
     private void setupPlaceholderAPI() {
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new DynamicShopExpansion(this).register();
-            getLogger().info("§aPlaceholderAPI found and hooked successfully!");
+            if (new DynamicShopExpansion(this).register()) {
+                getLogger().info("§aPlaceholderAPI found and hooked successfully!");
+            } else {
+                getLogger().warning("PlaceholderAPI found, but the DynamicShop expansion could not be registered.");
+            }
         } else {
             getLogger().info("§ePlaceholderAPI not found – placeholders will be disabled.");
         }

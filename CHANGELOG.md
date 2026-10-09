@@ -1,5 +1,41 @@
 # Release notes
 
+## 3.0.6
+
+### PlaceholderAPI
+
+DynamicShop's PlaceholderAPI expansion now overrides the correct `onRequest(OfflinePlayer, String)` callback. The previous method overloaded a different callback signature, allowing registration to succeed while requests fell through to PlaceholderAPI's default handler.
+
+Added `%dynamicshop_stock_<MATERIAL>%`, including `%dynamicshop_stock_GOLD_INGOT%`, to return live shop stock. Whole quantities have no trailing decimal, fractional and negative stock are preserved, and missing or invalid materials return `0`. Material lookup is case-insensitive and independent of the server locale.
+
+Item statistics preserve full material names and statistic names containing underscores, such as `%dynamicshop_item_times_bought_quantity_GOLD_INGOT%`. Player statistics preserve names such as `test_player` and the `total_spent`/`total_earned` suffixes. Existing compact item statistic aliases remain supported. Startup only reports a successful PlaceholderAPI hook when registration succeeds.
+
+Install the JAR and restart with PlaceholderAPI installed. No extra expansion download, config edits, or website update are required. Verify with `/papi parse me %dynamicshop_stock_GOLD_INGOT%`.
+
+Regression tests exercise PlaceholderAPI's real percent-placeholder parser with the exact reported placeholder, callback dispatch for existing global statistics, live stock changes, underscore parsing, Turkish locale handling, and the configured currency in recent transactions. A live check on the reporting server is still needed.
+
+### Category menu
+
+Category-selection icons no longer show vanilla attribute tooltips such as “When in Main Hand,” attack damage, attack speed, or armor stats below the category description. Names, item counts, and browse instructions are retained. The change is applied to menu icon copies, preserving the attributes of actual shop items and custom item templates. Icons without explicit attributes receive a hidden zero-value modifier for compatibility with Paper's vanilla-attribute hiding behavior.
+
+Install the JAR and restart. No config edits or website update are required.
+
+### Config preservation and currency overrides
+
+Missing config defaults are inserted as new lines inside the relevant section. Upgrading preserves existing values, comments, quote styles, Unicode, and Windows line endings. Existing shop item entries are not repopulated. The combined YAML is validated before replacement; malformed files are left untouched.
+
+A symbol-only currency format, such as `economy.currency_format: "🪙"`, now displays `🪙 75.51` in game and on the website. Previously, a value without `<money>` was silently ignored and could fall back to the economy's dollar format. The stored value is preserved. Empty formats still inherit Vault/CoinsEngine formatting, and explicit suffix templates such as `"<money> 🪙"` retain their placement.
+
+Startup and reload logs include the economy provider, its formatted sample, the configured override, and the resulting shop format. This distinguishes a provider returning dollars from an unapplied override. Install the new JAR and restart; website files already containing currency-display support need no update for symbol-only overrides.
+
+### Economy formatting
+
+Currency symbols now follow the economy provider across in-game shops, player listings, admin price displays, messages, and the recent-transaction placeholder. LiteEco's configured coin symbol is inherited through Vault's formatter. Older installed messages that prefix `{price}` with a dollar sign are handled without editing the owner's message file.
+
+The website inherits the provider's currency prefix/suffix instead of assuming dollars. Optional `economy.currency_format`, `currency_singular_name`, and `currency_plural_name` settings provide a shared display override, also editable in Administration → Configuration → Economy. Formats include `🪙 <money>`, `<money> 🪙`, and `<money> <currency>`. The override uses grouped numbers with two decimal places. Payment currencies and balances are unaffected. Website currency text is escaped when rendered into HTML.
+
+Replace the JAR, restart the server, then run `/shopadmin webupdate`. File-based configuration changes use `/shopadmin reload`.
+
 ## 3.0.5
 
 This update fixes custom items missing from the in-game search. The previous search only checked ordinary Minecraft material entries, so a newly registered watering can could appear in Gardening but disappear when you searched for it. Search now includes those separately registered custom entries.

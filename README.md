@@ -3,7 +3,24 @@ DynamicShop — Dynamic Global Trade Market
 
 A fully dynamic, supply-and-demand driven economy system for Minecraft servers.
 
-Current version: **3.0.5** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
+Current version: **3.0.6** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
+
+Version 3.0.6 fixes PlaceholderAPI resolution and adds `%dynamicshop_stock_<MATERIAL>%` for live shop stock. Material and player names containing underscores, and item/player statistic names containing underscores, are parsed intact. Install the JAR and restart with PlaceholderAPI installed; no additional expansion download or config changes are required. Check stock with `/papi parse me %dynamicshop_stock_GOLD_INGOT%`.
+
+The category-selection menu icons hide vanilla attribute tooltips, such as attack damage and attack speed. Category names, item counts, and browse instructions are retained. Install the new JAR and restart; this fix needs no config edits or website update.
+
+Missing config defaults are inserted in their sections without reserializing existing settings, comments, quotes, or line endings. A symbol alone in `economy.currency_format` is also accepted (for example `"🪙"` becomes a coin prefix in displays, without changing the saved value). Startup and `/shopadmin reload` log the provider, its formatted sample, the configured override, and the shop's effective format to help diagnose currency display issues.
+
+Version 3.0.6 uses the economy provider's currency formatting throughout in-game price displays and inherits its symbol placement on the website. This includes LiteEco's configured coin symbol through Vault. Optional currency display settings are available under **Administration → Configuration → Economy**, or in `config.yml`:
+
+```yaml
+economy:
+  currency_format: "🪙 <money>"
+  currency_singular_name: "coin"
+  currency_plural_name: "coins"
+```
+
+Use `"<money> 🪙"` for a suffix or `"<money> <currency>"` for singular/plural names. Leave `currency_format` empty to use Vault/CoinsEngine formatting in game; the website inherits the provider's prefix/suffix and uses grouped numbers with two decimal places. These settings affect display only. After editing the file, run `/shopadmin reload`. Existing messages with `${price}` are handled without adding an extra dollar sign. Install the new JAR, restart, and run `/shopadmin webupdate` to install the updated website files. Currency changes saved through the website apply immediately.
 
 Version 3.0.5 fixes in-game searching for registered custom items. Search finds their visible names, keeps them in the selected category, and supports buying and selling directly from the results. Large searches now have previous and next page buttons.
 

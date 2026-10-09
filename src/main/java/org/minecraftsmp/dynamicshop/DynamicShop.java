@@ -1,7 +1,6 @@
 package org.minecraftsmp.dynamicshop;
 
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -394,52 +393,15 @@ public class DynamicShop extends JavaPlugin {
                     YamlConfiguration.loadConfiguration(
                             new InputStreamReader(stream, StandardCharsets.UTF_8));
             java.io.File configFile = new java.io.File(getDataFolder(), "config.yml");
-            YamlConfiguration existing = YamlConfiguration.loadConfiguration(configFile);
-            int added = copyMissingDefaults(defaults, existing, "");
+            int added = org.minecraftsmp.dynamicshop.config.ConfigDefaultInserter.addMissing(
+                    configFile.toPath(), defaults);
             if (added > 0) {
-                existing.save(configFile);
                 reloadConfig();
                 getLogger().info("[Config] Added " + added + " missing config default(s).");
             }
         } catch (Exception e) {
             getLogger().warning("[Config] Failed to add missing defaults: " + e.getMessage());
         }
-    }
-
-    private int copyMissingDefaults(
-            ConfigurationSection defaults, ConfigurationSection target, String path) {
-        int added = 0;
-
-        for (String key : defaults.getKeys(false)) {
-            String childPath = path.isEmpty() ? key : path + "." + key;
-            if (shouldSkipDefaultMerge(childPath)) {
-                continue;
-            }
-
-            if (defaults.isConfigurationSection(key)) {
-                if (!target.isSet(key)) {
-                    target.createSection(key);
-                }
-
-                ConfigurationSection defaultSection = defaults.getConfigurationSection(key);
-                ConfigurationSection targetSection = target.getConfigurationSection(key);
-                if (defaultSection != null && targetSection != null) {
-                    added += copyMissingDefaults(defaultSection, targetSection, childPath);
-                }
-            } else if (!target.isSet(key)) {
-                target.set(key, defaults.get(key));
-                added++;
-            }
-        }
-
-        return added;
-    }
-
-    private boolean shouldSkipDefaultMerge(String path) {
-        return path.equals("items")
-                || path.startsWith("items.")
-                || path.equals("special_items")
-                || path.startsWith("special_items.");
     }
 
     private void setupPlaceholderAPI() {

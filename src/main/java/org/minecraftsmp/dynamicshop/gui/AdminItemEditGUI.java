@@ -116,7 +116,7 @@ public class AdminItemEditGUI {
 
             List<String> lore = new ArrayList<>();
             lore.add("§7═══════════════════════");
-            lore.add("§7Base Price: §e$" + String.format("%.2f", basePrice));
+            lore.add("§7Base Price: §e" + plugin.getEconomyManager().format(basePrice));
             lore.add("§7Current Stock: §f" + String.format("%.0f", stock));
             lore.add("§7Category: §b" + category.getDisplayName());
             lore.add("§7Status: " + (disabled ? "§c✗ DISABLED" : "§a✓ ENABLED"));
@@ -158,7 +158,7 @@ public class AdminItemEditGUI {
 
             List<String> lore = new ArrayList<>();
             double currentPrice = ShopDataManager.getBasePrice(material);
-            lore.add("§7Current: §e$" + String.format("%.2f", currentPrice));
+            lore.add("§7Current: §e" + plugin.getEconomyManager().format(currentPrice));
             lore.add("");
             lore.add("§eClick to change");
 
@@ -404,7 +404,7 @@ public class AdminItemEditGUI {
                             player.sendMessage("§c✗ §7Price cannot be negative!");
                         } else {
                             ShopDataManager.setBasePrice(material, newPrice);
-                            player.sendMessage("§a✓ §7Base price set to §e$" + String.format("%.2f", newPrice));
+                            player.sendMessage("§a✓ §7Base price set to §e" + plugin.getEconomyManager().format(newPrice));
                         }
                     }
                     // Reopen this GUI with a NEW instance to avoid stale onClose handler

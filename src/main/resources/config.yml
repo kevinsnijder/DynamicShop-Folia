@@ -11,6 +11,15 @@ metrics:
 # ECONOMY SETTINGS
 # ================================================================
 economy:
+  # Empty uses Vault/CoinsEngine formatting (including LiteEco currency symbols).
+  # Override examples: "🪙 <money>", "<money> 🪙", "<money> <currency>".
+  # A symbol alone, such as "🪙", is shorthand for "🪙 <money>".
+  # <currency> selects the singular name for 1, and the plural name otherwise.
+  # These display settings do not change balances or the payment currency.
+  currency_format: ""
+  currency_singular_name: "" # Empty uses the provider name, falling back to coin.
+  currency_plural_name: "" # Empty uses the provider name, falling back to coins.
+
   # Sell tax percentage (how much less players get when selling)
   # 30 = players get 70% of item value when selling
   sell_tax_percent: 30

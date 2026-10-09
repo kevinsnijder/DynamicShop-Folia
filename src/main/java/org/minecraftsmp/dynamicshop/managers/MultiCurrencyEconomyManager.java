@@ -80,6 +80,7 @@ public class MultiCurrencyEconomyManager {
 
         // Load currency caches
         loadCurrencyCaches();
+        logCurrencyDisplay();
         return true;
     }
 
@@ -254,6 +255,23 @@ public class MultiCurrencyEconomyManager {
     public void reload() {
         defaultCurrency = plugin.getConfig().getString("economy.default_currency", "coins");
         loadCurrencyCaches();
+        logCurrencyDisplay();
+    }
+
+    private void logCurrencyDisplay() {
+        try {
+            String configured = plugin.getConfig().getString("economy.currency_format", "");
+            String provider = useCoinEngine ? "CoinsEngine"
+                    : vaultEconomy == null ? "Unavailable" : vaultEconomy.getName();
+            String sample = !useCoinEngine && vaultEconomy != null ? vaultEconomy.format(1.23) : "N/A";
+            plugin.getLogger().info("[MultiCurrency] Provider: " + provider
+                    + "; Vault format: [" + sample + "]; currency_format: [" + configured
+                    + "]; shop format: [" + format(1.23) + "]");
+            if (!CurrencyDisplay.validFormat(configured))
+                plugin.getLogger().warning("[MultiCurrency] economy.currency_format exceeds 256 characters; using the provider format.");
+        } catch (Exception e) {
+            plugin.getLogger().warning("[MultiCurrency] Could not preview currency formatting: " + e.getMessage());
+        }
     }
 
     // ---------------------------------------------------------------
@@ -592,6 +610,10 @@ public class MultiCurrencyEconomyManager {
         if (!Double.isFinite(value)) {
             return "N/A";
         }
+        String template = plugin.getConfig().getString("economy.currency_format", "");
+        if (CurrencyDisplay.validFormat(template) && !template.isBlank()) {
+            return CurrencyDisplay.format(template, value, currencyName(true), currencyName(false));
+        }
         if (useCoinEngine) {
             Object curr = getCoinEngineCurrency(currency);
             if (curr == null) {
@@ -614,18 +636,26 @@ public class MultiCurrencyEconomyManager {
      * Used when currency context is not available
      */
     public String format(double value) {
-        // Guard: BigDecimal cannot handle NaN or Infinity (causes NumberFormatException)
-        if (!Double.isFinite(value)) {
-            return "N/A";
+        return format(value, defaultCurrency);
+    }
+
+    private String currencyName(boolean singular) {
+        String configured = plugin.getConfig().getString(
+                "economy.currency_" + (singular ? "singular" : "plural") + "_name", "");
+        if (!configured.isBlank()) return configured;
+        if (!useCoinEngine && vaultEconomy != null) {
+            String name = singular ? vaultEconomy.currencyNameSingular() : vaultEconomy.currencyNamePlural();
+            if (name != null && !name.isBlank()) return name;
         }
-        if (useCoinEngine) {
-            return format(value, defaultCurrency);
-        } else {
-            if (vaultEconomy != null) {
-                return vaultEconomy.format(value);
-            }
-            return String.format("$%.2f", value);
-        }
+        if (useCoinEngine && defaultCurrency != null) return defaultCurrency;
+        return singular ? "coin" : "coins";
+    }
+
+    /** Call on the server thread because economy providers may use Bukkit state. */
+    public Map<String, String> getWebsiteCurrencySettings() {
+        return CurrencyDisplay.websiteSettings(
+                plugin.getConfig().getString("economy.currency_format", ""),
+                currencyName(true), currencyName(false), format(1.0), format(2.0));
     }
 
     private record SalePaymentFailure(String outcome, String error) {}

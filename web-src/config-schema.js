@@ -22,7 +22,10 @@ const cfgSchema={
                 toggles: [],
                 numbers: [
                     { key: 'sellTaxPercent', label: 'Sell Tax %', step: 1, desc: 'Tax on player sells (30 = 70% payout)' },
-                    { key: 'transactionCooldownMs', label: 'Transaction Cooldown (ms)', step: 100, desc: '0 = disabled' }
+                    { key: 'transactionCooldownMs', label: 'Transaction Cooldown (ms)', step: 100, desc: '0 = disabled' },
+                    { key: 'currencyFormat', label: 'Currency format', isText: true, desc: 'Empty uses the economy provider. A symbol alone is a prefix. Examples: 🪙, 🪙 <money> or <money> 🪙. Use <currency> for its name.' },
+                    { key: 'currencySingularName', label: 'Singular currency name', isText: true, desc: 'Example: coin. Empty uses the provider name.' },
+                    { key: 'currencyPluralName', label: 'Plural currency name', isText: true, desc: 'Example: coins. Empty uses the provider name.' }
                 ]
             },
             shop: {

@@ -23,6 +23,8 @@ Each update backs up replaced files in `plugins/DynamicShop/web-backups/`, outsi
 
 ## Server data and settings
 
+Currency display inherits the economy provider's prefix/suffix through `/api/website`. The website uses grouped numbers with two decimal places, independently of provider-specific compact formatting. An optional `economy.currency_format` override supports `<money>`, `<currency>`, `<currency_singular>`, and `<currency_plural>` and is editable in Administration → Configuration → Economy. `<currency>` uses the singular name for an absolute amount of exactly one. `node web-src/checks/currency.cjs` verifies coin placement, names, missing prices, and safe catalog rendering.
+
 The catalog shows current server stock and prices. Item graphs use the per-item prices of actual recorded trades. Market activity offers Last day, Last week and Forever; Forever covers all transactions currently retained in memory, limited by `logging.max_recent_transactions`, rather than the complete disk archive. Purchases and sales still happen in Minecraft.
 
 Six designs are available: Classic, Market Hall, Inventory, Nova, Chest GUI and DSX Exchange. DSX uses the shared catalog, filtering, watchlist and item history, presented as a quote board with ask/bid prices and recorded trade activity. Eight color palettes and twelve accent presets are available for every design. Administrators save the shared design, colors, fonts, branding and Home URL to `website-appearance.json`. Each visitor's watchlist stays in that browser's local storage. Only authenticated administrators can change server settings.

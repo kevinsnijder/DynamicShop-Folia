@@ -144,7 +144,7 @@ public class PlayerShopViewGUI {
 
             // Add shop info AFTER existing lore (preserve original lore)
             lore.add(MessageManager.parseComponent(""));
-            lore.add(MessageManager.parseComponent("§7Price: §e$" + String.format("%.2f", listing.getPrice())));
+            lore.add(MessageManager.parseComponent("§7Price: §e" + plugin.getEconomyManager().format(listing.getPrice())));
             lore.add(MessageManager.parseComponent("§7Amount: §f" + displayItem.getAmount()));
 
             // Show durability if applicable (using modern Damageable API)

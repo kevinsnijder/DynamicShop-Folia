@@ -301,7 +301,7 @@ public class PlayerShopListener implements Listener {
         // ---------------------------
         if (!plugin.getEconomyManager().hasEnough(player, price)) {
             Map<String, String> ph2 = new HashMap<>();
-            ph2.put("price", String.format("%.2f", price));
+            ph2.put("price", plugin.getEconomyManager().format(price));
             player.sendMessage(plugin.getMessageManager().getMessage("playershop-not-enough-money", ph2));
             player.closeInventory();
             return;
@@ -319,7 +319,7 @@ public class PlayerShopListener implements Listener {
         // Charge buyer first; abort if the economy provider rejects the transaction
         if (!plugin.getEconomyManager().charge(player, price)) {
             Map<String, String> ph2 = new HashMap<>();
-            ph2.put("price", String.format("%.2f", price));
+            ph2.put("price", plugin.getEconomyManager().format(price));
             player.sendMessage(plugin.getMessageManager().getMessage("playershop-not-enough-money", ph2));
             player.closeInventory();
             return;
@@ -333,7 +333,7 @@ public class PlayerShopListener implements Listener {
             ph3.put("item", sellerItemName);
             ph3.put("amount", String.valueOf(item.getAmount()));
             ph3.put("buyer", player.getName());
-            ph3.put("price", String.format("%.2f", price));
+            ph3.put("price", plugin.getEconomyManager().format(price));
             seller.sendMessage(plugin.getMessageManager().getMessage("playershop-sold-notification", ph3));
         } else {
             // Bukkit.getPlayer returns null when the seller is offline.
@@ -353,14 +353,14 @@ public class PlayerShopListener implements Listener {
         Map<String, String> ph4 = new HashMap<>();
         ph4.put("item", itemName);
         ph4.put("amount", String.valueOf(item.getAmount()));
-        ph4.put("price", String.format("%.2f", price));
+        ph4.put("price", plugin.getEconomyManager().format(price));
         player.sendMessage(plugin.getMessageManager().getMessage("playershop-purchased", ph4));
         if (plugin.getFeatureMetrics() != null) plugin.getFeatureMetrics().recordPlayerShopPurchase();
 
         // Log transaction
         plugin.getLogger().info("[PlayerShops] " + player.getName() + " bought " +
                 item.getType() + " x" + item.getAmount() + " from " +
-                listing.getSellerName() + " for $" + price);
+                listing.getSellerName() + " for " + plugin.getEconomyManager().format(price));
     }
 
     // Check if player has enough inventory space for an item

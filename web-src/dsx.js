@@ -15,7 +15,7 @@
     for(const t of recent){if(t.time<now-86400000)continue;const stats=activity.get(t.id)||{count:0,volume:0};stats.count++;stats.volume+=t.total;activity.set(t.id,stats)}
   }
   const number=value=>value==null?'—':Number(value).toLocaleString();
-  const price=value=>value==null?'—':money(value);
+  const price=value=>value==null?'—':escapeText(money(value));
   function renderBoard(){
     if(!active())return;
     const byId=new Map(items.map(item=>[item.id,item]));
@@ -24,7 +24,7 @@
     board.querySelector('tbody').innerHTML=shown.map(i=>{
       const stats=activity.get(i.historyId||i.id)||{count:0,volume:0};
       const spread=i.buy>0&&i.sell!=null?((i.buy-i.sell)/i.buy*100).toFixed(1)+'%':'—';
-      return `<tr><td><button class="dsx-watch" data-dsx-watch="${escapeText(i.id)}" aria-label="${watched.has(i.id)?'Remove':'Add'} ${escapeText(i.name)} ${watched.has(i.id)?'from':'to'} watchlist" aria-pressed="${watched.has(i.id)}">${watched.has(i.id)?'★':'☆'}</button></td><th scope="row"><button class="dsx-instrument" data-dsx-open="${escapeText(i.id)}">${art(i.id)}<span>${escapeText(i.name)}</span></button></th><td>${escapeText(i.category)}</td><td class="dsx-number dsx-ask">${price(i.disabled?null:i.buy)}</td><td class="dsx-number dsx-bid">${price(i.disabled?null:i.sell)}</td><td class="dsx-number">${i.disabled?'—':spread}</td><td class="dsx-number">${i.kind==='special'?'Always':number(i.stock)}</td><td class="dsx-number">${number(stats.count)}</td><td class="dsx-number">${money(stats.volume)}</td></tr>`;
+      return `<tr><td><button class="dsx-watch" data-dsx-watch="${escapeText(i.id)}" aria-label="${watched.has(i.id)?'Remove':'Add'} ${escapeText(i.name)} ${watched.has(i.id)?'from':'to'} watchlist" aria-pressed="${watched.has(i.id)}">${watched.has(i.id)?'★':'☆'}</button></td><th scope="row"><button class="dsx-instrument" data-dsx-open="${escapeText(i.id)}">${art(i.id)}<span>${escapeText(i.name)}</span></button></th><td>${escapeText(i.category)}</td><td class="dsx-number dsx-ask">${price(i.disabled?null:i.buy)}</td><td class="dsx-number dsx-bid">${price(i.disabled?null:i.sell)}</td><td class="dsx-number">${i.disabled?'—':spread}</td><td class="dsx-number">${i.kind==='special'?'Always':number(i.stock)}</td><td class="dsx-number">${number(stats.count)}</td><td class="dsx-number">${escapeText(money(stats.volume))}</td></tr>`;
     }).join('');
   }
   function renderTape(){

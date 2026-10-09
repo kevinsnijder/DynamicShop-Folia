@@ -131,20 +131,14 @@ public class WebServer {
                                     })
                             .start(host, port);
 
-            app.get(
-                    "/api/website",
-                    ctx ->
-                            ctx.json(
-                                    Map.of(
-                                            "appearance",
-                                            appearanceStore.get(),
-                                            "version",
-                                            "3.0.0",
-                                            "adminEnabled",
-                                            plugin.getConfig()
-                                                    .getBoolean("webserver.admin-enabled", true),
-                                            "usageMetricsEnabled",
-                                            usageMetrics.isEnabled())));
+            app.get("/api/website", ctx -> {
+                Map<String, Object> settings = callSyncAdminTask(ctx, () -> Map.of(
+                        "appearance", appearanceStore.get(), "version", plugin.getDescription().getVersion(),
+                        "adminEnabled", plugin.getConfig().getBoolean("webserver.admin-enabled", true),
+                        "usageMetricsEnabled", usageMetrics.isEnabled(),
+                        "currency", plugin.getEconomyManager().getWebsiteCurrencySettings()));
+                if (settings != null) ctx.json(settings);
+            });
             app.get(
                     "/api/usage/status",
                     ctx -> {
@@ -1565,6 +1559,9 @@ public class WebServer {
                 plugin.getConfig().getBoolean("dynamic-pricing.log-dynamic-pricing", false));
 
         // Economy
+        config.put("currencyFormat", plugin.getConfig().getString("economy.currency_format", ""));
+        config.put("currencySingularName", plugin.getConfig().getString("economy.currency_singular_name", ""));
+        config.put("currencyPluralName", plugin.getConfig().getString("economy.currency_plural_name", ""));
         config.put("sellTaxPercent", plugin.getConfig().getDouble("economy.sell_tax_percent", 30));
         config.put(
                 "transactionCooldownMs",
@@ -1646,6 +1643,7 @@ public class WebServer {
         if (!runSyncAdminTask(
                 ctx,
                 () -> {
+                    applyCurrencyConfig(body);
                     applyWebsiteConfig(body);
                     applyPriceCurveConfig(body);
                     applyInflationConfig(body);
@@ -2813,6 +2811,24 @@ public class WebServer {
                             "Stock exceeds storage limit for " + mat.name());
             }
         }
+    }
+
+    private void applyCurrencyConfig(Map<String, Object> body) {
+        Map<String, String> keys = Map.of(
+                "currencyFormat", "currency_format",
+                "currencySingularName", "currency_singular_name",
+                "currencyPluralName", "currency_plural_name");
+        // Validate all fields before changing any settings.
+        for (String key : keys.keySet()) {
+            if (!body.containsKey(key)) continue;
+            if (!(body.get(key) instanceof String value) || value.length() > 256
+                    || (key.equals("currencyFormat")
+                        && !org.minecraftsmp.dynamicshop.managers.CurrencyDisplay.validFormat(value)))
+                throw new IllegalArgumentException("Currency settings must be strings of at most 256 characters");
+        }
+        keys.forEach((key, configKey) -> {
+            if (body.containsKey(key)) plugin.getConfig().set("economy." + configKey, body.get(key));
+        });
     }
 
     private void applyWebsiteConfig(Map<String, Object> body) {

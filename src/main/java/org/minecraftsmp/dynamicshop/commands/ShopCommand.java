@@ -404,7 +404,7 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             Map<String, String> ph2 = new HashMap<>();
             ph2.put("item", itemName);
             ph2.put("amount", String.valueOf(itemToList.getAmount()));
-            ph2.put("price", String.format("%.2f", price));
+            ph2.put("price", plugin.getEconomyManager().format(price));
             player.sendMessage(plugin.getMessageManager().getMessage("playershop-listed", ph2));
             player.sendMessage(plugin.getMessageManager().getMessage("playershop-listed-success"));
         } else {

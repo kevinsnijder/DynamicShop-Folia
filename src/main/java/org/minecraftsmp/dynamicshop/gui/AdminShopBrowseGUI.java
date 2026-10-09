@@ -154,7 +154,7 @@ public class AdminShopBrowseGUI {
                 lore.add("§7Identifier: §a" + sItem.getItemIdentifier());
             }
 
-            lore.add("§7Price: §e$" + String.format("%.2f", sItem.getPrice()));
+            lore.add("§7Price: §e" + plugin.getEconomyManager().format(sItem.getPrice()));
 
             if (sItem.hasRequiredPermission()) {
                 lore.add("§7Requires: §c" + sItem.getRequiredPermission());
@@ -213,7 +213,7 @@ public class AdminShopBrowseGUI {
 
             List<String> lore = new ArrayList<>();
             lore.add("§7───────────────────");
-            lore.add("§7Base Price: §e$" + String.format("%.2f", basePrice));
+            lore.add("§7Base Price: §e" + plugin.getEconomyManager().format(basePrice));
             lore.add("§7Stock: §f" + String.format("%.0f", stock));
             lore.add("§7Category: §b" + category.getDisplayName());
             lore.add("§7Status: " + (disabled ? "§c✗ Disabled" : "§a✓ Enabled"));

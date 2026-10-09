@@ -53,7 +53,7 @@ public class PlayerShopManager {
         saveListings();
 
         plugin.getLogger().info("[PlayerShops] " + seller.getName() + " listed " +
-                item.getType() + " x" + item.getAmount() + " for $" + price);
+                item.getType() + " x" + item.getAmount() + " for " + plugin.getEconomyManager().format(price));
 
         return true;
     }

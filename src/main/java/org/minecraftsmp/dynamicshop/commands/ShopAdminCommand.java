@@ -821,7 +821,7 @@ public class ShopAdminCommand implements CommandExecutor, TabCompleter {
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("permission", perm);
-        placeholders.put("price", String.valueOf(price));
+        placeholders.put("price", plugin.getEconomyManager().format(price));
 
         sender.sendMessage(
                 plugin.getMessageManager()
@@ -964,7 +964,7 @@ public class ShopAdminCommand implements CommandExecutor, TabCompleter {
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("identifier", id);
-        placeholders.put("price", String.valueOf(price));
+        placeholders.put("price", plugin.getEconomyManager().format(price));
 
         sender.sendMessage(
                 plugin.getMessageManager()
@@ -1223,7 +1223,7 @@ public class ShopAdminCommand implements CommandExecutor, TabCompleter {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("item", id);
         placeholders.put("identifier", customId);
-        placeholders.put("price", String.valueOf(price));
+        placeholders.put("price", plugin.getEconomyManager().format(price));
         placeholders.put("category", CategoryConfigManager.getDisplayName(category));
 
         sender.sendMessage(
@@ -1327,7 +1327,7 @@ public class ShopAdminCommand implements CommandExecutor, TabCompleter {
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("item", mat.name().replace("_", " ").toLowerCase());
-        placeholders.put("price", String.valueOf(price));
+        placeholders.put("price", plugin.getEconomyManager().format(price));
         placeholders.put("category", category.name());
 
         sender.sendMessage(

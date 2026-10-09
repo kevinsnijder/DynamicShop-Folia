@@ -94,6 +94,10 @@ public class MessageManager {
             return null;
         }
 
+        // Older installed templates placed a dollar sign before the numeric price.
+        // Prices now include their provider/configured currency; preserve the rest of the message.
+        if (placeholders.containsKey("price")) message = message.replace("${price}", "{price}");
+
         // Replace placeholders
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             message = message.replace("{" + entry.getKey() + "}", entry.getValue());

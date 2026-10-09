@@ -15,7 +15,14 @@ function saveWatchlist(){
   catch{return false}
 }
 let category='All',page='catalog',selected=null,watched=readWatchlist(),toastTimer;
-const $=id=>document.getElementById(id),money=n=>n == null ? 'Unavailable' : '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const $=id=>document.getElementById(id);
+function money(n,numberText){
+  if(n==null||!Number.isFinite(n))return 'Unavailable';
+  const currency=website?.currency||{},template=(Math.abs(n)===1?currency.singularFormat:currency.format)||'$<money>';
+  const amount=numberText??n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const singular=currency.singularName||'coin',plural=currency.pluralName||'coins';
+  return template.replaceAll('<money>',amount).replaceAll('<currency>',Math.abs(n)===1?singular:plural).replaceAll('<currency_singular>',singular).replaceAll('<currency_plural>',plural);
+}
 
 function notify(text){$('toast').textContent=text;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2700)}
 function stockText(item){if(item.kind==='special')return 'Always available';if(item.kind==='playershop')return item.stock+' items in listing';return item.disabled?'Trading disabled':item.stock==null?'Stock unavailable':item.stock<=0?'Out of stock':item.stock.toLocaleString()+' in stock'}
@@ -30,7 +37,7 @@ function render(){
   $('empty').hidden=visible.length>0;
   $('emptyText').textContent=page==='favorites'&&!watched.size?'Tap the heart on an item to keep it close.':'Try another name or category.';
   const shown=visible.slice(0,visibleLimit);
-  $('itemGrid').innerHTML=shown.map(i=>`<article class="item-card ${i.disabled?'unavailable':''}"><button class="watch-button ${watched.has(i.id)?'active':''}" data-watch="${escapeText(i.id)}" aria-label="${watched.has(i.id)?'Remove':'Add'} ${escapeText(i.name)} ${watched.has(i.id)?'from':'to'} watchlist" aria-pressed="${watched.has(i.id)}">${icon('heart')}</button><button class="card-open" data-open="${escapeText(i.id)}" aria-label="View ${escapeText(i.name)}"><div class="card-art" style="--tint:#263c34">${i.disabled?'<span class="tag disabled-tag">UNAVAILABLE</span>':i.tag?`<span class="tag ${i.category==='Custom'?'custom':''}">${i.tag}</span>`:''}${art(i.id)}</div><div class="card-info"><span class="card-category">${escapeText(i.category)}</span><h3>${escapeText(i.name)}</h3><div class="card-prices"><div><span class="price-label">BUY</span><strong>${money(i.buy)}</strong></div><div><span class="price-label">SELL</span><strong>${money(i.sell)}</strong></div></div></div><div class="card-bottom"><span>${i.stock>0&&!i.disabled?'<i class="green-dot"></i>':''}${stockText(i)}</span><span>View item ↗</span></div></button></article>`).join('');
+  $('itemGrid').innerHTML=shown.map(i=>`<article class="item-card ${i.disabled?'unavailable':''}"><button class="watch-button ${watched.has(i.id)?'active':''}" data-watch="${escapeText(i.id)}" aria-label="${watched.has(i.id)?'Remove':'Add'} ${escapeText(i.name)} ${watched.has(i.id)?'from':'to'} watchlist" aria-pressed="${watched.has(i.id)}">${icon('heart')}</button><button class="card-open" data-open="${escapeText(i.id)}" aria-label="View ${escapeText(i.name)}"><div class="card-art" style="--tint:#263c34">${i.disabled?'<span class="tag disabled-tag">UNAVAILABLE</span>':i.tag?`<span class="tag ${i.category==='Custom'?'custom':''}">${i.tag}</span>`:''}${art(i.id)}</div><div class="card-info"><span class="card-category">${escapeText(i.category)}</span><h3>${escapeText(i.name)}</h3><div class="card-prices"><div><span class="price-label">BUY</span><strong>${escapeText(money(i.buy))}</strong></div><div><span class="price-label">SELL</span><strong>${escapeText(money(i.sell))}</strong></div></div></div><div class="card-bottom"><span>${i.stock>0&&!i.disabled?'<i class="green-dot"></i>':''}${stockText(i)}</span><span>View item ↗</span></div></button></article>`).join('');
   $('loadMore').hidden=shown.length>=visible.length;
   $('catalogProgress').textContent=visible.length?'Showing '+shown.length+' of '+visible.length.toLocaleString()+' items':'';
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openItem(b.dataset.open));

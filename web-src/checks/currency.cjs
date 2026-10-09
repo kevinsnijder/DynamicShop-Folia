@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const fields=new Map();
+const document={querySelectorAll:()=>[],getElementById:id=>{
+  if(!fields.has(id))fields.set(id,{value:'',checked:false});return fields.get(id);
+}};
+const context=vm.createContext({document,localStorage:{getItem:()=>null},website:null,art:()=>''});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../catalog.js'),'utf8'),context);
+const run=code=>vm.runInContext(code,context);
+assert.equal(run('money(75.51)'), '$75.51');
+context.website={currency:{format:'🪙 <money>',singularFormat:'🪙 <money>'}};
+assert.equal(run('money(75.51)'), '🪙 75.51');
+assert.equal(run('money(1234.56)'), '🪙 1,234.56');
+context.website.currency.format='<money> 🪙';
+assert.equal(run('money(37.56)'), '37.56 🪙');
+context.website.currency={format:'<money> coins',singularFormat:'<money> coin'};
+assert.equal(run('money(1)'), '1.00 coin');
+assert.equal(run('money(0)'), '0.00 coins');
+assert.equal(run('money(null)'), 'Unavailable');
+assert.equal(run('money(Infinity)'), 'Unavailable');
+context.website.currency={format:'<money> <currency>',singularFormat:'<money> <currency>',singularName:'token',pluralName:'tokens'};
+assert.equal(run('money(1)'), '1.00 token');
+assert.equal(run('money(2)'), '2.00 tokens');
+context.website.currency.format='<img src=x onerror=alert(1)> <money>';
+run("items.push({id:'DIAMOND',name:'Diamond',category:'Ores',categoryId:'ORES',buy:75.51,sell:37.56,stock:10}); render()");
+assert.ok(fields.get('itemGrid').innerHTML.includes('&lt;img src=x onerror=alert(1)&gt; 75.51'));
+assert.ok(!fields.get('itemGrid').innerHTML.includes('<img'));
+console.log('Currency checks passed: provider prefix/suffix, names, numbers, missing prices, safe catalog rendering.');

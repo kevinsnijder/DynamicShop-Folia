@@ -122,10 +122,10 @@ messages:
   shop-lore-low-stock-emphasis: "&e&lLOW STOCK!"
 
   # Admin messages
-  admin-item-added: "&aAdded &e{item} &ato category &e{category} &awith price &e${price}"
+  admin-item-added: "&aAdded &e{item} &ato category &e{category} &awith price &e{price}"
   admin-item-removed: "&aRemoved &e{item} &afrom shop."
-  admin-permission-added: "&aAdded permission shop item: &e{permission} &7(${price})"
-  admin-server-shop-added: "&aAdded server-shop item: &e{identifier} &7(${price})"
+  admin-permission-added: "&aAdded permission shop item: &e{permission} &7({price})"
+  admin-server-shop-added: "&aAdded server-shop item: &e{identifier} &7({price})"
   admin-must-hold-item: "&cYou must be holding an item."
   admin-unknown-category: "&cUnknown category: &e{category}"
   admin-list-categories: "&7Valid categories:"
@@ -144,11 +144,11 @@ messages:
   admin-usage-add-server-shop: "&cUsage: /shopadmin add server-shop <price> <identifier>"
 
   # Player Shop messages
-  playershop-listed: "&a✓ &7Listed &f{item} &7x{amount} &7for &a${price}"
+  playershop-listed: "&a✓ &7Listed &f{item} &7x{amount} &7for &a{price}"
   playershop-listed-success: "&7Players can now buy this from your shop!"
   playershop-reclaimed: "&a✓ &7Reclaimed &f{item} &7x{amount}"
-  playershop-purchased: "&a✓ &7Purchased &f{item} &7x{amount} &7for &a${price}"
-  playershop-sold-notification: "&a✓ &7Your &f{item} &7x{amount} &7was purchased by &e{buyer} &7for &a${price}"
+  playershop-purchased: "&a✓ &7Purchased &f{item} &7x{amount} &7for &a{price}"
+  playershop-sold-notification: "&a✓ &7Your &f{item} &7x{amount} &7was purchased by &e{buyer} &7for &a{price}"
   playershop-max-listings: "&c✗ &7You've reached the maximum of &c{max} &7listings!"
   playershop-remove-items-first: "&7Remove some items from your shop first."
   playershop-shop-empty: "&7Your shop is now empty."
@@ -159,7 +159,7 @@ messages:
   playershop-price-must-be-positive: "&c✗ &7Price must be greater than 0!"
   playershop-no-permission-sell: "&c✗ &7You don't have permission to sell items!"
   playershop-listing-failed: "&c✗ &7Failed to list item!"
-  playershop-not-enough-money: "&c✗ &7You need &c${price} &7to buy this item!"
+  playershop-not-enough-money: "&c✗ &7You need &c{price} &7to buy this item!"
   playershop-not-enough-space: "&c✗ &7Not enough inventory space!"
   
   # Stock restriction message

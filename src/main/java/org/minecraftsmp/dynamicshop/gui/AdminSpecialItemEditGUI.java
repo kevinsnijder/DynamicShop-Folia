@@ -92,7 +92,7 @@ public class AdminSpecialItemEditGUI {
                 lore.add("§7Delivery: §f" + (item.getDeliveryMethod() != null ? item.getDeliveryMethod() : "item"));
             }
 
-            lore.add("§7Price: §e$" + String.format("%.2f", item.getPrice()));
+            lore.add("§7Price: §e" + plugin.getEconomyManager().format(item.getPrice()));
 
             if (item.hasRequiredPermission()) {
                 lore.add("§7Required Perm: §c" + item.getRequiredPermission());
@@ -111,7 +111,7 @@ public class AdminSpecialItemEditGUI {
         if (meta != null) {
             org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(meta, MessageManager.parseComponent("§e§lEdit Price"));
             List<String> lore = new ArrayList<>();
-            lore.add("§7Current: §e$" + String.format("%.2f", item.getPrice()));
+            lore.add("§7Current: §e" + plugin.getEconomyManager().format(item.getPrice()));
             lore.add("");
             lore.add("§eClick to change");
             org.minecraftsmp.dynamicshop.util.PaperCompat.setLore(meta, lore.stream().map(s -> MessageManager.parseComponent(s)).toList());
@@ -214,7 +214,7 @@ public class AdminSpecialItemEditGUI {
                             player.sendMessage("§cPrice cannot be negative!");
                         } else {
                             plugin.getSpecialShopManager().updateItemPrice(item.getId(), newPrice);
-                            player.sendMessage("§a✓ §7Price updated to §e$" + String.format("%.2f", newPrice));
+                            player.sendMessage("§a✓ §7Price updated to §e" + plugin.getEconomyManager().format(newPrice));
                         }
                     }
 

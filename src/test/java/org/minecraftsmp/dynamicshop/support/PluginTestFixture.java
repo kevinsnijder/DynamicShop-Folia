@@ -28,6 +28,8 @@ public final class PluginTestFixture {
         set(messages, MessageManager.class, "messagesConfig", new YamlConfiguration());
         set(messages, MessageManager.class, "prefix", "");
         set(plugin, DynamicShop.class, "messageManager", messages);
+        set(plugin, DynamicShop.class, "economyManager",
+                new org.minecraftsmp.dynamicshop.managers.MultiCurrencyEconomyManager(plugin));
         return plugin;
     }
 

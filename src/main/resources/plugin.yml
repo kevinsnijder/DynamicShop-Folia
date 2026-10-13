@@ -43,4 +43,4 @@ permissions:
     default: false
   dynamicshop.use.sellall:
     description: Allows /shop sellall and /shop sellall hand
-    default: false
+    default: op

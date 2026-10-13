@@ -167,8 +167,9 @@ public class SearchResultsGUI {
             org.minecraftsmp.dynamicshop.util.PaperCompat.setItemName(meta, nameComponent);
         } else if (!meta.hasDisplayName() && !meta.hasItemName()) {
             org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(
-                    meta, MessageManager.parseComponent("§e§l" + mat.name().replace("_", " ")));
+                    meta, MessageManager.parseComponent("§e§l" + ShopItemNames.getDisplayName(mat)));
         }
+        ShopItemNames.applyBookDisplayName(item, meta);
 
         double buy = ShopDataManager.getTotalBuyCost(mat, 1);
         double sell = ShopDataManager.getTotalSellValue(mat, 1);

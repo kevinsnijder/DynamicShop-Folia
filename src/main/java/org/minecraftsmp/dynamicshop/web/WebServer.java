@@ -930,9 +930,7 @@ public class WebServer {
             items.add(
                     new ShopItemDTO(
                             "special:" + specialItem.getId(),
-                            specialItem.getName() != null
-                                    ? specialItem.getName()
-                                    : specialItem.getId(),
+                            plugin.getSpecialShopManager().getDisplayName(specialItem),
                             specialItem.getCategory().name(),
                             getCategoryDisplayName(specialItem.getCategory()),
                             specialItem.getPrice(),
@@ -1297,7 +1295,7 @@ public class WebServer {
             item.put("item", "special:" + specialItem.getId());
             item.put(
                     "displayName",
-                    specialItem.getName() != null ? specialItem.getName() : specialItem.getId());
+                    plugin.getSpecialShopManager().getDisplayName(specialItem));
             item.put("category", specialItem.getCategory().name());
             item.put("categoryDisplayName", getCategoryDisplayName(specialItem.getCategory()));
             item.put("basePrice", specialItem.getPrice());
@@ -2624,7 +2622,7 @@ public class WebServer {
         row.put("item", "special:" + id);
         row.put("tradeItem", true);
         row.put("material", mat.name());
-        row.put("displayName", item.getName());
+        row.put("displayName", plugin.getSpecialShopManager().getDisplayName(item));
         row.put("customName", item.getName());
         row.put("category", item.getCategory().name());
         row.put("categoryDisplayName", getCategoryDisplayName(item.getCategory()));

@@ -601,6 +601,16 @@ public class SpecialShopManager {
     // ------------------------------------------------------------
     // PURCHASE HANDLING
     // ------------------------------------------------------------
+    public boolean ownsReward(Player player, SpecialShopItem item) {
+        PermissionsManager permissions = plugin.getPermissionsManager();
+        if (permissions == null) return false;
+        if (item.isGroupItem()) {
+            return permissions.isInGroup(player, item.getGroupName(), item.getGroupWorld());
+        }
+        return item.isPermissionItem()
+                && permissions.hasPermission(player, item.getPermission(), item.getPermissionWorld());
+    }
+
     public void purchase(Player p, SpecialShopItem requestedItem) {
         SpecialShopItem item = requestedItem == null ? null : registry.get(requestedItem.getId());
         if (item == null || item != requestedItem) {
@@ -643,8 +653,15 @@ public class SpecialShopManager {
             }
         }
 
+        if (ownsReward(p, item)) {
+            p.sendMessage(plugin.getMessageManager().specialPermissionAlreadyOwned());
+            return;
+        }
+
         ItemCategory category =
-                item.isServerShopItem() ? ItemCategory.SERVER_SHOP : item.getCategory();
+                item.isServerShopItem() ? ItemCategory.SERVER_SHOP
+                        : item.isPermissionItem() || item.isGroupItem() || item.isCommandItem()
+                                ? ItemCategory.PERMISSIONS : item.getCategory();
 
         switch (category) {
             case PERMISSIONS -> {

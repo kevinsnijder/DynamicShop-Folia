@@ -123,7 +123,11 @@ public class ItemActionGUI {
         if (meta != null && !meta.hasDisplayName() && !meta.hasItemName()) {
             org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(
                     meta,
-                    MessageManager.parseComponent("§e§l" + targetItem.name().replace("_", " ")));
+                    MessageManager.parseComponent("§e§l" + org.minecraftsmp.dynamicshop.util.ShopItemNames.getDisplayName(targetItem, deliveryOverride)));
+            item.setItemMeta(meta);
+        }
+        if (meta != null) {
+            org.minecraftsmp.dynamicshop.util.ShopItemNames.applyBookDisplayName(item, meta);
             item.setItemMeta(meta);
         }
         return item;

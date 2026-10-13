@@ -16,6 +16,7 @@ import org.minecraftsmp.dynamicshop.managers.NexoWrapper;
 import org.minecraftsmp.dynamicshop.managers.ProtocolShopManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.util.ShopItemBuilder;
+import org.minecraftsmp.dynamicshop.util.ShopItemNames;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -246,13 +247,9 @@ public class ShopGUI {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             applySpecialDisplayName(meta, specialItem);
+            ShopItemNames.applyBookDisplayName(item, meta);
 
             Material baseMat = specialItem.getDisplayMaterial();
-            boolean hasDynamicPrice =
-                    baseMat != null
-                            && ShopDataManager.itemConfigs.containsKey(baseMat)
-                            && specialItem.getPrice() > 0;
-
             if (specialItem.isTradeItem()) {
                 applyVariantLore(item, meta, specialItem, baseMat);
                 return item;
@@ -262,27 +259,9 @@ public class ShopGUI {
             List<String> lore = new ArrayList<>();
             lore.add("§7───────────────────");
 
-            if (hasDynamicPrice && !specialItem.isServerShopItem()) {
-                // Use the base material's dynamic pricing
-                double buyPrice = ShopDataManager.getTotalBuyCost(baseMat, 1);
-                double sellPrice = ShopDataManager.getTotalSellValue(baseMat, 1);
-                String buyFormatted = plugin.getEconomyManager().format(buyPrice);
-                String sellFormatted = plugin.getEconomyManager().format(sellPrice);
-
-                boolean buyDisabled = ShopDataManager.isBuyDisabled(baseMat);
-                boolean sellDisabled = ShopDataManager.isSellDisabled(baseMat);
-
-                if (!buyDisabled) {
-                    lore.add("§a§lBUY: §f" + buyFormatted);
-                }
-                if (!sellDisabled && sellPrice > 0) {
-                    lore.add("§c§lSELL: §f" + sellFormatted);
-                }
-            } else {
-                // Fall back to the special item's fixed price
-                String priceFormatted = plugin.getEconomyManager().format(specialItem.getPrice());
-                lore.add("§a§lBUY: §f" + priceFormatted);
-            }
+            // A reward's icon is decorative; its material price and sell rules do not apply.
+            String priceFormatted = plugin.getEconomyManager().format(specialItem.getPrice());
+            lore.add("§a§lBUY: §f" + priceFormatted);
 
             lore.add("§7");
 
@@ -290,26 +269,17 @@ public class ShopGUI {
             if (specialItem.isPermissionItem()) {
                 lore.add("§7Type: §dPermission");
                 lore.add("§7Node: §f" + specialItem.getPermission());
-
-                // Check if player already owns it
-                if (plugin.getPermissionsManager()
-                        .hasPermission(
-                                player,
-                                specialItem.getPermission(),
-                                specialItem.getPermissionWorld())) {
-                    lore.add("§7");
-                    lore.add("§a✔ You already own this!");
-                }
+            } else if (specialItem.isGroupItem()) {
+                lore.add("§7Type: §dGroup");
+                lore.add("§7Group: §f" + specialItem.getGroupName());
             } else if (specialItem.isServerShopItem()) {
                 lore.add("\u00A77Stock: \u00A7aUnlimited");
             }
 
             lore.add("§7───────────────────");
 
-            // Instructions
-            if (ConfigCacheManager.useDialogGui) {
-                MessageManager.addLoreIfNotEmpty(
-                        lore, plugin.getMessageManager().getMessage("dialog-lore-click-to-open"));
+            if (plugin.getSpecialShopManager().ownsReward(player, specialItem)) {
+                lore.add("§a✔ You already own this!");
             } else {
                 lore.add("§eLeft-click to BUY");
             }
@@ -381,8 +351,9 @@ public class ShopGUI {
             } else if (!meta.hasDisplayName() && !meta.hasItemName()) {
                 // No custom name and no template name — use prettified material name
                 org.minecraftsmp.dynamicshop.util.PaperCompat.setDisplayName(
-                        meta, MessageManager.parseComponent("§e§l" + mat.name().replace("_", " ")));
+                        meta, MessageManager.parseComponent("§e§l" + ShopItemNames.getDisplayName(mat)));
             }
+            ShopItemNames.applyBookDisplayName(item, meta);
 
             List<String> lore = new ArrayList<>();
 

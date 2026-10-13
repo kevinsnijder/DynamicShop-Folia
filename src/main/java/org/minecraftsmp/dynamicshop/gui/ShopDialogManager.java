@@ -414,6 +414,11 @@ public class ShopDialogManager {
             displayItem = template != null ? template.clone() : new ItemStack(mat);
             if (template != null) displayItem.setAmount(1);
         }
+        var meta = displayItem.getItemMeta();
+        if (meta != null) {
+            ShopItemNames.applyBookDisplayName(displayItem, meta);
+            displayItem.setItemMeta(meta);
+        }
         return displayItem;
     }
 

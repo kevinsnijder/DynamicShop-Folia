@@ -302,14 +302,11 @@ public class SpecialShopItem {
     }
 
     public boolean isPermissionItem() {
-        return category == ItemCategory.PERMISSIONS
-                && (groupName == null || groupName.isEmpty())
-                && (commandOnPurchase == null || commandOnPurchase.isEmpty());
+        return permission != null && !permission.isBlank() && !isServerShopItem();
     }
 
     public boolean isGroupItem() {
-        return category == ItemCategory.PERMISSIONS
-                && groupName != null && !groupName.isEmpty();
+        return groupName != null && !groupName.isBlank();
     }
 
     public boolean isCommandItem() {

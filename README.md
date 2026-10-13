@@ -3,7 +3,11 @@ DynamicShop — Dynamic Global Trade Market
 
 A fully dynamic, supply-and-demand driven economy system for Minecraft servers.
 
-Current version: **3.0.6** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
+Current version: **3.0.7** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
+
+Version 3.0.7 adds a deposit-and-confirm sell menu, fixes permission/group upgrade prices and ownership checks, shows saved enchanted-book enchantments in game and on the webshop, and makes `dynamicshop.use.sellall` default to operators. Purchased books retain their original metadata. Install the updated JAR and restart; no config reset, re-adding of saved books, or website-file update is needed.
+
+Use `/sell` or `/shop sell` to open the sell menu. Place or shift-click items into its 45 deposit slots, hover over each stack in either inventory to see its per-item price and stack value, and check the **Total worth** button before confirming. Prices include sell tax and stock-storage limits. Cancel or close the menu to get unsold items back; if your inventory is full, they drop beside you with your UUID set as their owner. Existing item lore and enchantments are preserved. The menu uses `dynamicshop.use` and `dynamicshop.use.sellgui` (default: `true`); disable it with `gui.sell_menu_enabled: false`. If another plugin owns `/sell`, use `/dynamicshop:sell` or `/shop sell`. `/shop sell <price>` still creates a player-shop listing.
 
 Version 3.0.6 fixes PlaceholderAPI resolution and adds `%dynamicshop_stock_<MATERIAL>%` for live shop stock. Material and player names containing underscores, and item/player statistic names containing underscores, are parsed intact. Install the JAR and restart with PlaceholderAPI installed; no additional expansion download or config changes are required. Check stock with `/papi parse me %dynamicshop_stock_GOLD_INGOT%`.
 
@@ -26,7 +30,7 @@ Version 3.0.5 fixes in-game searching for registered custom items. Search finds 
 
 Version 3.0.4 enables buying and selling physical custom items with independent stock and adds them to the website category editor, including trading controls and permanent removal. See [CHANGELOG.md](CHANGELOG.md) for details.
 
-Use `/shop sellall hand` to sell all sellable stacks matching your held item throughout your inventory. It requires `dynamicshop.use` and `dynamicshop.use.sellall`, respects shop stock limits, and preserves custom-item template checks. `/shop sellhand` sells only the held stack; `/shop sellall` sells all sellable item types.
+Use `/shop sellall hand` to sell all sellable stacks matching your held item throughout your inventory. It requires `dynamicshop.use` and `dynamicshop.use.sellall`, respects shop stock limits, and preserves custom-item template checks. `dynamicshop.use.sellall` defaults to operators; other players can be granted it through their permissions plugin. `/shop sellhand` sells only the held stack; `/shop sellall` sells all sellable item types.
 
 Version 3.0.2 includes six website designs, eight coordinated color palettes, twelve accent presets, and aggregate bStats charts for integrations, website/GUI usage, online player ranges, dynamic pricing, inflation, and transaction volume. Oraxen support and the Floodgate-based Bedrock GUI fallback are included.
 

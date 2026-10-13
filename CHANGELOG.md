@@ -1,5 +1,18 @@
 # Release notes
 
+## 3.0.7
+
+- Added `/sell` and `/shop sell` with 45 item slots, confirm/cancel buttons, and a total for each currency.
+- Hover over items in the sell menu or your inventory below to see the per-item price, stack value, and sellable amount. Prices include tax and stock limits; the per-item price is the average for the accepted items in that stack.
+- Price tooltips use fake display copies, so real items keep their original lore and enchantments. Previews are sent directly to fix the ProtocolLib tooltip error on newer Paper servers.
+- Closing or cancelling the sell menu returns unsold items. Only items placed in the menu are sold, and changed prices require another confirmation.
+- Saved enchanted books show their enchantments and levels in game and on the webshop. Bought books keep their saved enchantments.
+- Permission and group upgrades show their configured price and cannot be bought again when already owned. Moving an upgrade to another category keeps its reward behavior.
+- `/shop sellall` and `/shop sellall hand` are now available to operators by default. Other players still need `dynamicshop.use.sellall`.
+- The sell menu is enabled by default. Disable it with `gui.sell_menu_enabled: false`, or control access with `dynamicshop.use.sellgui` (default: `true`).
+
+Replace the JAR and restart. Existing configs are preserved, and missing settings are added without resetting them. Use `/dynamicshop:sell` if another plugin owns `/sell`. `/shop sell <price>` still creates a player-shop listing.
+
 ## 3.0.6
 
 ### PlaceholderAPI

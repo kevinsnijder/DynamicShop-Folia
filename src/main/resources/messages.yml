@@ -25,6 +25,26 @@ messages:
   cannot-sell-damaged: "&cYou cannot sell damaged items."
   sellall-usage: "&cUsage: /shop sellall [hand]"
 
+  # Deposit sell menu (items keep their original metadata)
+  sell-gui-title: "&8Sell Items"
+  sell-gui-unavailable: "&cThe sell menu is disabled or you do not have permission to use it."
+  sell-gui-item-value: "&7Per item: &f{price}"
+  sell-gui-stack-value: "&aStack value: &f{price}"
+  sell-gui-stack-count: "&7Sellable: &f{count}/{amount}"
+  sell-gui-preview: "&7Place this item above to sell it."
+  sell-gui-accept: "&a&lConfirm sale"
+  sell-gui-accept-lore: "&7Sell the items placed above."
+  sell-gui-cancel: "&c&lCancel"
+  sell-gui-cancel-lore: "&7Return your items and close."
+  sell-gui-total: "&e&lTotal worth"
+  sell-gui-total-count: "&7Items to sell: &f{count}"
+  sell-gui-empty: "&7Place items in the empty slots above."
+  sell-gui-tax-note: "&7Prices include sell tax."
+  sell-gui-return-note: "&7Unsold items will be returned."
+  sell-gui-changed: "&ePrices or items changed. Review the updated total and confirm again."
+  sell-gui-nothing: "&cThere are no sellable items in this menu."
+  sell-gui-sold: "&aSold &f{count} &aitems for &f{price}&a."
+
   # Category messages
   category-opened: "&aOpened category: &e{category}"
   category-empty: "&cThis category has no items available for purchase."

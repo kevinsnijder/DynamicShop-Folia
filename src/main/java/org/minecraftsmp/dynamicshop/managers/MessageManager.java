@@ -87,7 +87,11 @@ public class MessageManager {
     }
 
     public String getMessage(String key, Map<String, String> placeholders) {
-        String message = messagesConfig.getString("messages." + key, "&cMessage not found: " + key);
+        return getMessage(key, placeholders, "&cMessage not found: " + key);
+    }
+
+    public String getMessage(String key, Map<String, String> placeholders, String fallback) {
+        String message = messagesConfig.getString("messages." + key, fallback);
 
         // If message is empty, return null to indicate it should be skipped
         if (message.isEmpty()) {

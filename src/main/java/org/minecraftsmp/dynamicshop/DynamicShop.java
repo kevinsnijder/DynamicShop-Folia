@@ -6,6 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import org.minecraftsmp.dynamicshop.commands.ShopAdminCommand;
 import org.minecraftsmp.dynamicshop.commands.ShopCommand;
+import org.minecraftsmp.dynamicshop.commands.SellCommand;
 
 import org.minecraftsmp.dynamicshop.gui.SearchResultsGUI;
 import org.minecraftsmp.dynamicshop.managers.*;
@@ -28,6 +29,7 @@ public class DynamicShop extends JavaPlugin {
     private MultiCurrencyEconomyManager economyManager;
     private ProtocolShopManager protocolShopManager;
     private ShopListener shopListener;
+    private SellMenuManager sellMenuManager;
     private SpecialShopManager specialShopManager;
     private TransactionLogger transactionLogger;
     private org.minecraftsmp.dynamicshop.metrics.FeatureMetrics featureMetrics;
@@ -173,6 +175,10 @@ public class DynamicShop extends JavaPlugin {
         shopListener = new ShopListener(this);
         Bukkit.getPluginManager().registerEvents(shopListener, this);
 
+        sellMenuManager = new SellMenuManager(this);
+        Bukkit.getPluginManager().registerEvents(sellMenuManager, this);
+        sellMenuManager.start();
+
         // Register player shop listener
         this.playerShopListener = new PlayerShopListener(this);
         getServer().getPluginManager().registerEvents(playerShopListener, this);
@@ -198,6 +204,10 @@ public class DynamicShop extends JavaPlugin {
         getCommand("shop").setExecutor(new ShopCommand(this));
         getCommand("shop").setTabCompleter(new ShopCommand(this));
 
+        SellCommand sellCommand = new SellCommand(this);
+        getCommand("sell").setExecutor(sellCommand);
+        getCommand("sell").setTabCompleter(sellCommand);
+
         ShopAdminCommand adminCmd = new ShopAdminCommand(this);
         getCommand("shopadmin").setExecutor(adminCmd);
         getCommand("shopadmin").setTabCompleter(adminCmd);
@@ -207,6 +217,8 @@ public class DynamicShop extends JavaPlugin {
 
     @Override
     public void onDisable() {
+
+        if (sellMenuManager != null) sellMenuManager.shutdown();
 
         // Cancel timer to prevent memory leak
         if (ShopDataManager.saveTimer != null) {
@@ -289,6 +301,8 @@ public class DynamicShop extends JavaPlugin {
     public ShopListener getShopListener() {
         return shopListener;
     }
+
+    public SellMenuManager getSellMenuManager() { return sellMenuManager; }
 
     public SpecialShopManager getSpecialShopManager() {
         return specialShopManager;

@@ -71,6 +71,13 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
             return handleSellAll(p, args);
         }
 
+        // Deposit menu; /shop sell <price> still creates a player-shop listing.
+        if (args.length >= 1 && args[0].equalsIgnoreCase("sell")
+                && (args.length == 1 || (args.length == 2 && args[1].equalsIgnoreCase("gui")))) {
+            plugin.getSellMenuManager().open(p);
+            return true;
+        }
+
         // Handle /shop sell <price> (player shop listing)
         if (args.length >= 2 && args[0].equalsIgnoreCase("sell")) {
             return handleSellCommand(p, args);
@@ -128,6 +135,10 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender s, Command cmd, String alias, String[] args) {
         List<String> out = new ArrayList<>();
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("sell")
+                && s.hasPermission("dynamicshop.use") && s.hasPermission("dynamicshop.use.sellgui")
+                && "gui".startsWith(args[1].toLowerCase(java.util.Locale.ROOT))) out.add("gui");
 
         if (args.length == 2
                 && args[0].equalsIgnoreCase("sellall")

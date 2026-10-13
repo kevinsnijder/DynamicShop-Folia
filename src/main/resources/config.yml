@@ -32,6 +32,9 @@ economy:
 # GUI SETTINGS
 # ================================================================
 gui:
+  # Open the deposit-and-confirm sell menu with /sell or /shop sell.
+  sell_menu_enabled: true
+
   # Size of shop menu (must be multiple of 9: 27, 36, 45, 54)
   # Bottom 9 slots are reserved for navigation
   shop_menu_size: 54

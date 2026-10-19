@@ -32,6 +32,17 @@ public class ConfigCacheManager {
     public static double highInflationCorrectionReductionPercent = 50.0;
     public static boolean restrictBuyingAtZeroStock = false;
     public static boolean logDynamicPricing = false;
+    public static double minBuyPriceMultiplier = 0.0;
+    public static double stockDecayHalfLifeHours = 0.0;
+
+    /**
+     * Lowest buy price as a multiple of base: the higher of min-price-multiplier and
+     * min-buy-price-multiplier, never above max-price-multiplier.
+     */
+    public static double getBuyMinPriceMultiplier() {
+        double floor = Double.isFinite(minBuyPriceMultiplier) ? minBuyPriceMultiplier : 0.0;
+        return Math.min(Math.max(minPriceMultiplier, floor), maxPriceMultiplier);
+    }
 
     // GUI SETTINGS
     public static int shopMenuSize = 54;
@@ -104,6 +115,8 @@ public class ConfigCacheManager {
         restrictBuyingAtZeroStock = plugin.getConfig().getBoolean("dynamic-pricing.restrict-buying-at-zero-stock",
                 false);
         logDynamicPricing = plugin.getConfig().getBoolean("dynamic-pricing.log-dynamic-pricing", false);
+        minBuyPriceMultiplier = plugin.getConfig().getDouble("dynamic-pricing.min-buy-price-multiplier", 0.0);
+        stockDecayHalfLifeHours = plugin.getConfig().getDouble("dynamic-pricing.stock-decay-half-life-hours", 0.0);
     }
 
     private static void loadGuiSettings() {

@@ -129,6 +129,19 @@ dynamic-pricing:
   min-price-multiplier: 0.01   # Never cheaper than 1% of base price
   max-price-multiplier: 2.0    # Never more than 2x base price
 
+  # Separate floor for BUYING only (selling still uses min-price-multiplier).
+  # Keep it at or above (1 - sell_tax_percent/100) when stock decay is on, so stock bought
+  # cheaply from a flooded shop can never be sold back for more after the market recovers.
+  # 0 = same floor as min-price-multiplier.
+  min-buy-price-multiplier: 0.0
+
+  # --- Stock Decay ---
+  # Stock drifts back toward 0 over time (from both sides), so flooded or emptied
+  # markets recover. Value = hours for the stock to move halfway back to 0.
+  # Example with 24: stock 2000 -> 1000 after a day -> 500 after two days.
+  # Only counts while the server is running. 0 = off.
+  stock-decay-half-life-hours: 0
+
   # --- Negative Stock Pricing ---
   # Applies when players sell more than they buy (stock goes negative)
   # Increases buy price for EACH item in negative stock

@@ -12,6 +12,10 @@ A fully dynamic, supply-and-demand driven economy system for Minecraft servers.
 > - Messages support hex colours with `&#RRGGBB`.
 > - The `/sell` menu can sell items at zero or negative stock when dynamic pricing is on.
 > - The update checker follows this fork's releases.
+> - Optional stock decay (`dynamic-pricing.stock-decay-half-life-hours`): stock drifts back toward 0 so flooded or emptied markets recover instead of staying at the price limits.
+> - Optional buy floor (`dynamic-pricing.min-buy-price-multiplier`): buying never goes below this multiple of base, so stock bought cheaply before it decays can't be sold back at a profit. Keep it at or above `1 - sell_tax_percent/100` when decay is on.
+>
+> Fork-only updates on the same upstream version are tagged `-folia-updateN` (for example `3.0.7-folia-update1`).
 
 Current version: **3.0.7** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
 

@@ -43,6 +43,7 @@ public class DynamicShop extends JavaPlugin {
     private org.minecraftsmp.dynamicshop.listeners.ChatInputListener chatInputListener;
     private org.minecraftsmp.dynamicshop.managers.InputManager inputManager;
     private RestockManager restockManager;
+    private StockDecayManager stockDecayManager;
     private org.minecraftsmp.dynamicshop.gui.ShopDialogManager shopDialogManager;
 
     private static DynamicShop instance;
@@ -98,6 +99,9 @@ public class DynamicShop extends JavaPlugin {
         // Initialize restock scheduler
         restockManager = new RestockManager(this);
         restockManager.init();
+
+        stockDecayManager = new StockDecayManager(this);
+        stockDecayManager.init();
 
         // Auto-populate restock config section for existing servers
         if (!getConfig().isSet("restock")) {
@@ -226,6 +230,10 @@ public class DynamicShop extends JavaPlugin {
         // Cancel restock timers
         if (restockManager != null) {
             restockManager.shutdown();
+        }
+
+        if (stockDecayManager != null) {
+            stockDecayManager.shutdown();
         }
 
         // Flush queue before shutdown to save all pending updates

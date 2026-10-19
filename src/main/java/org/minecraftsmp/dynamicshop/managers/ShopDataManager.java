@@ -708,7 +708,7 @@ public class ShopDataManager {
         double a = s0 - amount;
         double b = s0;
 
-        double total = computeClampedIntegral(B, a, b, L, minStock, k, q, t);
+        double total = computeBuyIntegral(B, a, b, L, minStock, k, q, t);
         logDynamicPricing("BUY", mat.name(), B, s0, amount, h, t, k, q, total);
         return validQuote(total);
     }
@@ -776,7 +776,7 @@ public class ShopDataManager {
         double a = s0 - amount;
         double b = s0;
 
-        double total = computeClampedIntegral(basePrice, a, b, L, minStock, k, q, t);
+        double total = computeBuyIntegral(basePrice, a, b, L, minStock, k, q, t);
         logDynamicPricing("BUY", "variant:" + variantId, basePrice, s0, amount, h, t, k, q, total);
         return validQuote(total);
     }
@@ -946,6 +946,31 @@ public class ShopDataManager {
     // ============================================================================
     private static double computeClampedIntegral(
             double B, double a, double b, double L, double minStock, double k, double q, double t) {
+        return computeClampedIntegral(
+                B, a, b, L, minStock, k, q, t, ConfigCacheManager.minPriceMultiplier);
+    }
+
+    /**
+     * Buy-side integral: the same curve, but never below the buy floor
+     * (min-buy-price-multiplier), so stock that later decays back cannot be
+     * bought cheaply and sold back at the recovered price.
+     */
+    static double computeBuyIntegral(
+            double B, double a, double b, double L, double minStock, double k, double q, double t) {
+        return computeClampedIntegral(
+                B, a, b, L, minStock, k, q, t, ConfigCacheManager.getBuyMinPriceMultiplier());
+    }
+
+    private static double computeClampedIntegral(
+            double B,
+            double a,
+            double b,
+            double L,
+            double minStock,
+            double k,
+            double q,
+            double t,
+            double minMultiplier) {
         // Invalid state must not collapse into a zero-cost quote or an overpayment.
         if (validQuote(B) < 0
                 || !Double.isFinite(a)
@@ -960,9 +985,9 @@ public class ShopDataManager {
                 || !Double.isFinite(q)
                 || q < 1
                 || validQuote(t) < 0
-                || validQuote(ConfigCacheManager.minPriceMultiplier) < 0
+                || validQuote(minMultiplier) < 0
                 || validQuote(ConfigCacheManager.maxPriceMultiplier) < 0
-                || ConfigCacheManager.maxPriceMultiplier < ConfigCacheManager.minPriceMultiplier) {
+                || ConfigCacheManager.maxPriceMultiplier < minMultiplier) {
             return -1.0;
         }
         if (B == 0 || a == b) return 0.0;
@@ -970,7 +995,7 @@ public class ShopDataManager {
         double lowerBound = minStock;
         double upperBound = L;
         double maxPrice = B * ConfigCacheManager.maxPriceMultiplier;
-        double minPrice = B * ConfigCacheManager.minPriceMultiplier;
+        double minPrice = B * minMultiplier;
 
         // NEGATIVE REGION (-∞ → lowerBound]
         double negA = Math.min(a, lowerBound);
@@ -1800,6 +1825,47 @@ public class ShopDataManager {
      * Called every 5 minutes so items passively gain/lose shortage
      * even without player transactions.
      */
+    /**
+     * Fraction of stock that remains after the given hours with the given half-life.
+     * A half-life of zero or less disables decay.
+     */
+    static double stockDecayFactor(double hours, double halfLifeHours) {
+        if (!(halfLifeHours > 0) || !(hours > 0) || !Double.isFinite(hours)) {
+            return 1.0;
+        }
+        return Math.pow(0.5, hours / halfLifeHours);
+    }
+
+    /**
+     * Moves every item and variant stock toward zero (from either side) as if the given
+     * hours had passed with the configured half-life. Returns the number of entries changed.
+     */
+    public static synchronized int decayAllStock(double hours) {
+        double factor = stockDecayFactor(hours, ConfigCacheManager.stockDecayHalfLifeHours);
+        if (factor >= 1.0) {
+            return 0;
+        }
+        int changed = 0;
+        for (Material mat : itemConfigs.keySet()) {
+            double stock = stockMap.getOrDefault(mat, 0.0);
+            if (stock == 0.0) continue;
+            setStockDirect(mat, decayedStock(stock, factor));
+            changed++;
+        }
+        for (Map.Entry<String, Double> entry : variantStockMap.entrySet()) {
+            double stock = entry.getValue();
+            if (stock == 0.0) continue;
+            setVariantStock(entry.getKey(), decayedStock(stock, factor));
+            changed++;
+        }
+        return changed;
+    }
+
+    private static double decayedStock(double stock, double factor) {
+        double next = stock * factor;
+        return Math.abs(next) < 0.01 ? 0.0 : next;
+    }
+
     public static synchronized void tickAllShortage() {
         long now = System.currentTimeMillis();
         for (Material mat : itemConfigs.keySet()) {

@@ -3,6 +3,16 @@ DynamicShop — Dynamic Global Trade Market
 
 A fully dynamic, supply-and-demand driven economy system for Minecraft servers.
 
+> **DynamicShop-Folia** is a fork of [selfservice0/DynamicShop](https://github.com/selfservice0/DynamicShop), maintained by [Claude Code](https://claude.com/claude-code). Each new upstream release is merged, tested on a Folia server and published under the same version number with a `-folia` tag. Download it from [this fork's releases](https://github.com/kevinsnijder/DynamicShop-Folia/releases).
+>
+> Changes in this fork:
+> - Runs on Folia and its forks (such as Canvas) as well as Paper and Spigot.
+> - Trades are locked, so players in different regions can't corrupt an item's stock or buy one player-shop listing twice.
+> - ProtocolLib is no longer required; only Vault is.
+> - Messages support hex colours with `&#RRGGBB`.
+> - The `/sell` menu can sell items at zero or negative stock when dynamic pricing is on.
+> - The update checker follows this fork's releases.
+
 Current version: **3.0.7** · [Downloads](https://github.com/selfservice0/DynamicShop/releases) · [Wiki](https://github.com/selfservice0/DynamicShop/wiki) · [Interactive website demo](https://selfservice0.github.io/DynamicShop/) · [DSX Exchange preview](https://selfservice0.github.io/DynamicShop/?design=dsx#catalog)
 
 Version 3.0.7 adds a deposit-and-confirm sell menu, fixes permission/group upgrade prices and ownership checks, shows saved enchanted-book enchantments in game and on the webshop, and makes `dynamicshop.use.sellall` default to operators. Purchased books retain their original metadata. Install the updated JAR and restart; no config reset, re-adding of saved books, or website-file update is needed.

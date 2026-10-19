@@ -3,7 +3,7 @@ package org.minecraftsmp.dynamicshop.managers;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.scheduler.BukkitTask;
+import org.minecraftsmp.dynamicshop.util.FoliaScheduler;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
 
@@ -28,7 +28,7 @@ public class RestockManager {
     private record RestockRule(ItemCategory category, double targetStock, long intervalTicks) {}
 
     private final DynamicShop plugin;
-    private final List<BukkitTask> timers = new ArrayList<>();
+    private final List<FoliaScheduler.Task> timers = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public RestockManager(DynamicShop plugin) {
         this.plugin = plugin;
@@ -81,7 +81,7 @@ public class RestockManager {
     }
 
     private void scheduleRule(RestockRule rule) {
-        BukkitTask task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+        FoliaScheduler.Task task = FoliaScheduler.runGlobalTimer(plugin, () -> {
             List<Material> items = ShopDataManager.getItemsInCategory(rule.category());
             int count = 0;
             for (Material mat : items) {
@@ -95,7 +95,7 @@ public class RestockManager {
     }
 
     public void shutdown() {
-        for (BukkitTask timer : timers) {
+        for (FoliaScheduler.Task timer : timers) {
             if (!timer.isCancelled()) {
                 timer.cancel();
             }

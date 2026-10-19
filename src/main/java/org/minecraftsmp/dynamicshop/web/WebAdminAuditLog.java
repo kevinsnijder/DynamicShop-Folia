@@ -55,7 +55,7 @@ public class WebAdminAuditLog {
         }
 
         // Save async
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::save);
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runAsync(plugin, this::save);
 
         plugin.getLogger().info("[WebAdmin Audit] " + user + " | " + action + " | " + target + " | " + details);
     }

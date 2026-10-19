@@ -130,9 +130,9 @@ public class ShopGUI {
         plugin.getShopListener().updatePlayerInventoryLore(player, 2L);
 
         // Update player inventory lore AFTER the GUI is open
-        Bukkit.getScheduler()
-                .runTaskLater(
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(
                         plugin,
+                        player,
                         () -> {
                             plugin.getShopListener().updatePlayerInventoryLore(player);
                         },

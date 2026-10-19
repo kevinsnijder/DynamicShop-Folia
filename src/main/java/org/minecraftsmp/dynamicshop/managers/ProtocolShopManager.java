@@ -1,8 +1,5 @@
 package org.minecraftsmp.dynamicshop.managers;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -16,9 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Modern implementation using Bukkit inventories with ProtocolLib packet
- * interception
- * for click security.
+ * Modern implementation using Bukkit inventories with event-based click
+ * security.
  * 
  * In Minecraft 1.14+, we can't create fully virtual inventories via packets
  * alone.
@@ -31,15 +27,12 @@ public class ProtocolShopManager {
 
     @SuppressWarnings("unused")
     private final DynamicShop plugin;
-    @SuppressWarnings("unused")
-    private final ProtocolManager pm;
 
     // Track which inventories are "shop" inventories
-    private final Map<Inventory, Boolean> shopInventories = new HashMap<>();
+    private final Map<Inventory, Boolean> shopInventories = new java.util.concurrent.ConcurrentHashMap<>();
 
     public ProtocolShopManager(DynamicShop plugin) {
         this.plugin = plugin;
-        this.pm = ProtocolLibrary.getProtocolManager();
     }
 
     // -----------------------------------------------------------

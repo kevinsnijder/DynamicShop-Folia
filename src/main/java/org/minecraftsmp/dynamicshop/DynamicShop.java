@@ -139,9 +139,7 @@ public class DynamicShop extends JavaPlugin {
         // Warm up Nexo resolver AFTER all plugins have finished enabling.
         // Nexo's GlyphTag/ShiftTag singletons may not be ready during onEnable.
         if (Bukkit.getPluginManager().getPlugin("Nexo") != null) {
-            getServer()
-                    .getScheduler()
-                    .runTaskLater(
+            org.minecraftsmp.dynamicshop.util.FoliaScheduler.runGlobalLater(
                             this,
                             () -> {
                                 NexoWrapper.invalidateCache(); // Force re-init

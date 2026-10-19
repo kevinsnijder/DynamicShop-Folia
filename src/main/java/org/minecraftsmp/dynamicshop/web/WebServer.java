@@ -382,7 +382,7 @@ public class WebServer {
             if (Bukkit.isPrimaryThread()) {
                 return task.call();
             }
-            return Bukkit.getScheduler().callSyncMethod(plugin, task).get(10, TimeUnit.SECONDS);
+            return org.minecraftsmp.dynamicshop.util.FoliaScheduler.callGlobal(plugin, task).get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             Throwable reason =
                     e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;

@@ -25,8 +25,8 @@ public class PlayerShopListener implements Listener {
     private final DynamicShop plugin;
 
     // Track open GUIs so we can handle clicks properly
-    private final Map<UUID, PlayerShopBrowserGUI> openBrowserGUIs = new HashMap<>();
-    private final Map<UUID, PlayerShopViewGUI> openShopViewGUIs = new HashMap<>();
+    private final Map<UUID, PlayerShopBrowserGUI> openBrowserGUIs = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<UUID, PlayerShopViewGUI> openShopViewGUIs = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PlayerShopListener(DynamicShop plugin) {
         this.plugin = plugin;
@@ -259,7 +259,16 @@ public class PlayerShopListener implements Listener {
     /**
      * Player reclaims their own item from their shop
      */
+    /** Reclaims under the listing lock so a listing can only be taken once. */
     private void reclaimItem(Player player, PlayerShopListing listing) {
+        PlayerShopManager manager = plugin.getPlayerShopManager();
+        synchronized (manager) {
+            if (manager.getListing(listing.getListingId()) == null) return;
+            reclaimItemUnlocked(player, listing);
+        }
+    }
+
+    private void reclaimItemUnlocked(Player player, PlayerShopListing listing) {
         PlayerShopManager manager = plugin.getPlayerShopManager();
 
         // Give item back
@@ -284,7 +293,16 @@ public class PlayerShopListener implements Listener {
     /**
      * Player purchases an item from another player's shop
      */
+    /** Purchases under the listing lock so a listing can only be sold once. */
     private void purchaseItem(Player player, PlayerShopListing listing) {
+        PlayerShopManager manager = plugin.getPlayerShopManager();
+        synchronized (manager) {
+            if (manager.getListing(listing.getListingId()) == null) return;
+            purchaseItemUnlocked(player, listing);
+        }
+    }
+
+    private void purchaseItemUnlocked(Player player, PlayerShopListing listing) {
         PlayerShopManager manager = plugin.getPlayerShopManager();
         if (!manager.isEnabled()) {
             player.sendMessage("§cPlayer shops are currently disabled.");

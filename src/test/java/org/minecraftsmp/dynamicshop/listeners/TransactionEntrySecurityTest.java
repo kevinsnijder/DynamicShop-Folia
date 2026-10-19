@@ -226,6 +226,11 @@ public class TransactionEntrySecurityTest {
         PlayerShopManager manager =
                 new PlayerShopManager(plugin) {
                     @Override
+                    public synchronized PlayerShopListing getListing(String id) {
+                        return listing.getListingId().equals(id) ? listing : null;
+                    }
+
+                    @Override
                     public synchronized boolean removeListing(String id) {
                         assertEquals(listing.getListingId(), id);
                         actions.add("remove listing");

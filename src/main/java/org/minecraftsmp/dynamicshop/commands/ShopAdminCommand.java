@@ -644,9 +644,12 @@ public class ShopAdminCommand implements CommandExecutor, TabCompleter {
         }
 
         // Open the shop for the target player
-        ShopGUI shopGUI = new ShopGUI(plugin, target, category, true);
-        plugin.getShopListener().registerShop(target, shopGUI);
-        shopGUI.open();
+        final ItemCategory openCategory = category;
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, target, () -> {
+            ShopGUI shopGUI = new ShopGUI(plugin, target, openCategory, true);
+            plugin.getShopListener().registerShop(target, shopGUI);
+            shopGUI.open();
+        });
 
         sender.sendMessage(
                 "§aOpened " + category.getDisplayName() + " shop for " + target.getName());

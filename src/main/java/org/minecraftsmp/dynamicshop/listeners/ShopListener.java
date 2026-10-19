@@ -40,17 +40,17 @@ public class ShopListener implements Listener {
 
     private final DynamicShop plugin;
 
-    private final Map<Player, ShopGUI> openShop = new HashMap<>();
-    private final Map<Player, CategorySelectionGUI> openCategory = new HashMap<>();
-    private final Map<Player, SearchResultsGUI> openSearch = new HashMap<>();
-    private final Map<Player, AdminShopBrowseGUI> openAdminBrowse = new HashMap<>();
-    private final Map<Player, AdminItemEditGUI> openAdminEdit = new HashMap<>();
-    private final Map<Player, AdminConfigGUI> openAdminConfig = new HashMap<>();
-    private final Map<Player, AdminSpecialItemEditGUI> openAdminSpecialEdit = new HashMap<>();
-    private final Map<Player, AdminCategoryGUI> openAdminCategory = new HashMap<>();
-    private final Map<Player, AdminCategoryEditGUI> openAdminCategoryEdit = new HashMap<>();
-    private final Map<Player, ItemActionGUI> openItemAction = new HashMap<>();
-    private final Map<UUID, Long> lastTransaction = new HashMap<>();
+    private final Map<Player, ShopGUI> openShop = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, CategorySelectionGUI> openCategory = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, SearchResultsGUI> openSearch = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, AdminShopBrowseGUI> openAdminBrowse = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, AdminItemEditGUI> openAdminEdit = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, AdminConfigGUI> openAdminConfig = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, AdminSpecialItemEditGUI> openAdminSpecialEdit = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, AdminCategoryGUI> openAdminCategory = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, AdminCategoryEditGUI> openAdminCategoryEdit = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<Player, ItemActionGUI> openItemAction = java.util.Collections.synchronizedMap(new HashMap<>());
+    private final Map<UUID, Long> lastTransaction = new java.util.concurrent.ConcurrentHashMap<>();
 
     public ShopListener(DynamicShop plugin) {
         this.plugin = plugin;
@@ -478,7 +478,21 @@ public class ShopListener implements Listener {
         buyItem(p, mat, amount, gui, deliveryOverride, variantBasePrice, null);
     }
 
+    /** Quotes, charges and updates stock as one step so concurrent regions cannot race. */
     public void buyItem(
+            Player p,
+            Material mat,
+            int amount,
+            Object gui,
+            ItemStack deliveryOverride,
+            double variantBasePrice,
+            String variantId) {
+        synchronized (ShopDataManager.class) {
+            buyItemUnlocked(p, mat, amount, gui, deliveryOverride, variantBasePrice, variantId);
+        }
+    }
+
+    private void buyItemUnlocked(
             Player p,
             Material mat,
             int amount,
@@ -568,7 +582,7 @@ public class ShopListener implements Listener {
         if (gui instanceof ShopGUI) ((ShopGUI) gui).render();
         if (gui instanceof SearchResultsGUI) ((SearchResultsGUI) gui).render();
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> updateSingleItemLore(p, mat), 3L);
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(plugin, p, () -> updateSingleItemLore(p, mat), 3L);
     }
 
     // ------------------------------------------------------------------
@@ -578,7 +592,21 @@ public class ShopListener implements Listener {
         sellItem(p, mat, amount, gui, null, -1, null);
     }
 
+    /** Quotes, removes items and pays out as one step so concurrent regions cannot race. */
     public void sellItem(
+            Player p,
+            Material mat,
+            int amount,
+            Object gui,
+            ItemStack variantTemplate,
+            double variantBasePrice,
+            String variantId) {
+        synchronized (ShopDataManager.class) {
+            sellItemUnlocked(p, mat, amount, gui, variantTemplate, variantBasePrice, variantId);
+        }
+    }
+
+    private void sellItemUnlocked(
             Player p,
             Material mat,
             int amount,
@@ -676,7 +704,7 @@ public class ShopListener implements Listener {
         if (gui instanceof ShopGUI) ((ShopGUI) gui).render();
         if (gui instanceof SearchResultsGUI) ((SearchResultsGUI) gui).render();
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> updateSingleItemLore(p, mat), 3L);
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(plugin, p, () -> updateSingleItemLore(p, mat), 3L);
     }
 
     public int countSellableItems(Player p, Material mat, ItemStack variantTemplate) {
@@ -731,13 +759,12 @@ public class ShopListener implements Listener {
     public void updatePlayerInventoryLore(Player player, long delay) {
         if (!openShop.containsKey(player) && !openSearch.containsKey(player)) return;
 
-        Bukkit.getScheduler()
-                .runTaskLater(
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(
                         plugin,
+                        player,
                         () -> {
                             try {
-                                com.comphenix.protocol.ProtocolManager pm =
-                                        com.comphenix.protocol.ProtocolLibrary.getProtocolManager();
+                                Map<Integer, ItemStack> fakeSlots = new HashMap<>();
 
                                 Map<Material, List<String>> loreCache = new HashMap<>();
 
@@ -752,8 +779,9 @@ public class ShopListener implements Listener {
                                     if (!isSellMatch(item, mat, null) || isDamaged(item))
                                         continue; // different item data than the shop item
 
-                                    sendFakeItemWithLore(pm, player, i, item, mat, loreCache);
+                                    sendFakeItemWithLore(fakeSlots, player, i, item, mat, loreCache);
                                 }
+                                org.minecraftsmp.dynamicshop.managers.SellMenuPackets.send(player, fakeSlots);
                             } catch (Exception ex) {
                                 plugin.getLogger()
                                         .warning(
@@ -772,8 +800,7 @@ public class ShopListener implements Listener {
         if (!openShop.containsKey(player) && !openSearch.containsKey(player)) return;
 
         try {
-            com.comphenix.protocol.ProtocolManager pm =
-                    com.comphenix.protocol.ProtocolLibrary.getProtocolManager();
+            Map<Integer, ItemStack> fakeSlots = new HashMap<>();
             Map<Material, List<String>> loreCache = new HashMap<>();
 
             for (int i = 0; i < 36; i++) {
@@ -781,8 +808,9 @@ public class ShopListener implements Listener {
                 if (item == null || item.getType() != targetMat) continue;
                 if (!isSellMatch(item, targetMat, null) || isDamaged(item)) continue;
 
-                sendFakeItemWithLore(pm, player, i, item, targetMat, loreCache);
+                sendFakeItemWithLore(fakeSlots, player, i, item, targetMat, loreCache);
             }
+            org.minecraftsmp.dynamicshop.managers.SellMenuPackets.send(player, fakeSlots);
         } catch (Exception ex) {
             plugin.getLogger()
                     .warning("Failed to update lore for " + targetMat + ": " + ex.getMessage());
@@ -790,10 +818,10 @@ public class ShopListener implements Listener {
     }
 
     // ------------------------------------------------------------------
-    // PROTOCOLLIB: SEND FAKE ITEM WITH DYNAMIC LORE
+    // PACKETS: QUEUE FAKE ITEM WITH DYNAMIC LORE
     // ------------------------------------------------------------------
     private void sendFakeItemWithLore(
-            com.comphenix.protocol.ProtocolManager pm,
+            Map<Integer, ItemStack> fakeSlots,
             Player player,
             int slot,
             ItemStack item,
@@ -852,9 +880,6 @@ public class ShopListener implements Listener {
                 meta, lore.stream().map(s -> MessageManager.parseComponent(s)).toList());
         fake.setItemMeta(meta);
 
-        com.comphenix.protocol.events.PacketContainer packet =
-                pm.createPacket(com.comphenix.protocol.PacketType.Play.Server.SET_SLOT);
-
         int containerSize = 0;
         if (openShop.containsKey(player)) {
             containerSize = openShop.get(player).getSize();
@@ -871,24 +896,7 @@ public class ShopListener implements Listener {
             packetSlot = containerSize + (slot - 9);
         }
 
-        packet.getIntegers().write(0, getOpenWindowId(player)).write(1, 0).write(2, packetSlot);
-
-        packet.getItemModifier().write(0, fake);
-
-        pm.sendServerPacket(player, packet);
-    }
-
-    // ------------------------------------------------------------------
-    // NMS: GET WINDOW ID
-    // ------------------------------------------------------------------
-    private int getOpenWindowId(Player player) {
-        try {
-            Object handle = player.getClass().getMethod("getHandle").invoke(player);
-            Object container = handle.getClass().getField("containerMenu").get(handle);
-            return (int) container.getClass().getField("containerId").get(container);
-        } catch (Exception e) {
-            return 1; // fallback
-        }
+        fakeSlots.put(packetSlot, fake);
     }
 
     // ------------------------------------------------------------------
@@ -896,9 +904,9 @@ public class ShopListener implements Listener {
     // ------------------------------------------------------------------
     private void clearFakeInventoryLore(Player player) {
         // Force update all inventory slots to remove fake packet-based lore
-        Bukkit.getScheduler()
-                .runTaskLater(
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(
                         plugin,
+                        player,
                         () -> {
                             player.updateInventory();
                         },

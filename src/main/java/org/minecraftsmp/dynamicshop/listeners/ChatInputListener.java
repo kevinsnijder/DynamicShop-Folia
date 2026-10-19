@@ -25,10 +25,10 @@ public class ChatInputListener implements Listener {
     private final DynamicShop plugin;
 
     // Generic pending inputs with callbacks
-    private final Map<UUID, PendingGenericInput> pendingGenericInputs = new HashMap<>();
+    private final Map<UUID, PendingGenericInput> pendingGenericInputs = new java.util.concurrent.ConcurrentHashMap<>();
 
     // Category-specific inputs (legacy support)
-    private final Map<UUID, PendingCategoryInput> pendingCategoryInputs = new HashMap<>();
+    private final Map<UUID, PendingCategoryInput> pendingCategoryInputs = new java.util.concurrent.ConcurrentHashMap<>();
 
     public ChatInputListener(DynamicShop plugin) {
         this.plugin = plugin;
@@ -135,11 +135,11 @@ public class ChatInputListener implements Listener {
 
             if (input.equalsIgnoreCase("cancel")) {
                 player.sendMessage("§c[DynamicShop] §fCancelled.");
-                Bukkit.getScheduler().runTask(plugin, () -> genericPending.callback.accept(null));
+                org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> genericPending.callback.accept(null));
                 return;
             }
 
-            Bukkit.getScheduler().runTask(plugin, () -> genericPending.callback.accept(input));
+            org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> genericPending.callback.accept(input));
             return;
         }
 
@@ -182,7 +182,7 @@ public class ChatInputListener implements Listener {
     }
 
     private void reopenCategoryGUI(Player player, PendingCategoryInput pending) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
             AdminCategoryEditGUI editGUI = new AdminCategoryEditGUI(plugin, player, pending.category,
                     pending.parentGUI);
             plugin.getShopListener().registerAdminCategoryEdit(player, editGUI);

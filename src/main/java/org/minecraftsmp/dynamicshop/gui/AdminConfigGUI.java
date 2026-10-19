@@ -286,7 +286,7 @@ public class AdminConfigGUI {
                     }
 
                     // Reopen config GUI with a NEW instance to avoid stale onClose handler
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminConfigGUI newGUI = new AdminConfigGUI(plugin, player, parentGUI);
                         plugin.getShopListener().registerAdminConfig(player, newGUI);
                         newGUI.open();
@@ -309,7 +309,7 @@ public class AdminConfigGUI {
                     }
 
                     // Reopen config GUI with a NEW instance to avoid stale onClose handler
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminConfigGUI newGUI = new AdminConfigGUI(plugin, player, parentGUI);
                         plugin.getShopListener().registerAdminConfig(player, newGUI);
                         newGUI.open();

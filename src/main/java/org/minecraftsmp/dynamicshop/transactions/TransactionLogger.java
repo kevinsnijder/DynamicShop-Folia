@@ -1,6 +1,6 @@
 package org.minecraftsmp.dynamicshop.transactions;
 
-import org.bukkit.scheduler.BukkitTask;
+import org.minecraftsmp.dynamicshop.util.FoliaScheduler;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 
 import java.io.*;
@@ -23,7 +23,7 @@ public class TransactionLogger {
             new java.util.concurrent.ConcurrentLinkedQueue<>();
 
     // Batch update system - writes to disk periodically
-    private BukkitTask periodicTask = null;
+    private FoliaScheduler.Task periodicTask = null;
 
     public TransactionLogger(DynamicShop plugin) {
         this.plugin = plugin;
@@ -63,7 +63,7 @@ public class TransactionLogger {
             periodicTask.cancel();
         }
 
-        periodicTask = plugin.getServer().getScheduler().runTaskTimerAsynchronously(
+        periodicTask = FoliaScheduler.runAsyncTimer(
                 plugin, this::flushPendingWrites, 100L, 100L);
     }
 

@@ -684,9 +684,9 @@ public class SpecialShopManager {
                             cmd.replace("{player}", p.getName())
                                     .replace("{uuid}", p.getUniqueId().toString());
                     final String finalCmd = cmd;
-                    Bukkit.getScheduler()
-                            .runTask(
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(
                                     plugin,
+                                    p,
                                     () ->
                                             Bukkit.dispatchCommand(
                                                     Bukkit.getConsoleSender(), finalCmd));

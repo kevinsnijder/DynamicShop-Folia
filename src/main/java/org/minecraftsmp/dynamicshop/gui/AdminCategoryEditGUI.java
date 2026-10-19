@@ -213,7 +213,7 @@ public class AdminCategoryEditGUI {
                     }
 
                     // Reopen GUI with a NEW instance to avoid stale onClose handler
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminCategoryEditGUI newGUI = new AdminCategoryEditGUI(plugin, player, category, parentGUI);
                         plugin.getShopListener().registerAdminCategoryEdit(player, newGUI);
                         newGUI.open();
@@ -234,7 +234,7 @@ public class AdminCategoryEditGUI {
                     }
 
                     // Reopen GUI with a NEW instance to avoid stale onClose handler
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminCategoryEditGUI newGUI = new AdminCategoryEditGUI(plugin, player, category, parentGUI);
                         plugin.getShopListener().registerAdminCategoryEdit(player, newGUI);
                         newGUI.open();
@@ -305,7 +305,7 @@ public class AdminCategoryEditGUI {
                         }
                     }
 
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminCategoryEditGUI newGUI = new AdminCategoryEditGUI(plugin, player, category, parentGUI);
                         plugin.getShopListener().registerAdminCategoryEdit(player, newGUI);
                         newGUI.open();
@@ -345,7 +345,7 @@ public class AdminCategoryEditGUI {
                         }
                     }
 
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminCategoryEditGUI newGUI = new AdminCategoryEditGUI(plugin, player, category, parentGUI);
                         plugin.getShopListener().registerAdminCategoryEdit(player, newGUI);
                         newGUI.open();

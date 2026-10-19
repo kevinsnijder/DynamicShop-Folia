@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /** Sends client-only copies using the current server's packet constructor and menu revision. */
-final class SellMenuPackets {
+public final class SellMenuPackets {
     @FunctionalInterface interface Sender {
         void send(Player player, Map<Integer, ItemStack> items) throws ReflectiveOperationException;
     }
@@ -17,7 +17,7 @@ final class SellMenuPackets {
 
     private SellMenuPackets() {}
 
-    static void send(Player player, Map<Integer, ItemStack> items) throws ReflectiveOperationException {
+    public static void send(Player player, Map<Integer, ItemStack> items) throws ReflectiveOperationException {
         Class<?> playerClass = player.getClass();
         Bridge bridge = BRIDGES.get(playerClass);
         if (bridge == null) {

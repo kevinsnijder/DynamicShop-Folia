@@ -3,7 +3,6 @@ package org.minecraftsmp.dynamicshop.managers;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.bukkit.Material;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -66,8 +65,7 @@ public class EmbeddedP2PManager {
         startListener();
 
         // Ask who has newer data (after flushing our queue)
-        new BukkitRunnable() {
-            @Override public void run() {
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runGlobalLater(plugin, () -> {
                 // Flush queue and save before requesting sync
                 // This ensures we send our true current state
                 ShopDataManager.flushQueue();
@@ -77,8 +75,7 @@ public class EmbeddedP2PManager {
                 publisher.send(TOPIC_SYNC_REQUEST + " " + myTx);
 
                 plugin.getLogger().info("[P2P] Requesting sync with transaction time: " + myTx);
-            }
-        }.runTaskLater(plugin, 60L);
+        }, 60L);
     }
 
     private String parsePeerAddress(String input) {
@@ -116,9 +113,7 @@ public class EmbeddedP2PManager {
                         handleSyncResponse(msg);
                     } else if (msg.startsWith(TOPIC_STOCK + " ")) {
                         String json = msg.substring(TOPIC_STOCK.length() + 1);
-                        new BukkitRunnable() {
-                            @Override public void run() { handleStock(json); }
-                        }.runTask(plugin);
+                        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runGlobal(plugin, () -> handleStock(json));
                     }
 
                 } catch (Exception ignored) {}
@@ -139,9 +134,7 @@ public class EmbeddedP2PManager {
 
         // CRITICAL: Flush queue and save data before checking/responding
         // This ensures we send the most up-to-date data as source of truth
-        new BukkitRunnable() {
-            @Override
-            public void run() {
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runGlobal(plugin, () -> {
                 // Force process all pending updates immediately
                 ShopDataManager.flushQueue();
 
@@ -154,8 +147,7 @@ public class EmbeddedP2PManager {
                     publisher.send(TOPIC_SYNC_RESPONSE + " " + myTx);
                     sendFullSync(myTx);
                 }
-            }
-        }.runTask(plugin);
+        });
     }
 
     // --------------------------------------------------------------------

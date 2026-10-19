@@ -185,7 +185,14 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     // --------------------------------------------------------------------
     // SELL HAND: sell entire held stack to the dynamic shop
     // --------------------------------------------------------------------
+    /** Sells the held stack under the shop lock so concurrent regions cannot race. */
     private boolean handleSellHand(Player p) {
+        synchronized (ShopDataManager.class) {
+            return handleSellHandUnlocked(p);
+        }
+    }
+
+    private boolean handleSellHandUnlocked(Player p) {
         if (!plugin.getShopListener().checkTransactionCooldown(p)) return true;
         ItemStack held = p.getInventory().getItemInMainHand();
         SaleTarget custom = customSaleTarget(p, held);
@@ -584,7 +591,18 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         return sellable;
     }
 
+    /** Sells one material under the shop lock so concurrent regions cannot race. */
     private int sellMaterial(
+            Player p,
+            Map.Entry<String, Integer> entry,
+            Map<String, Double> payoutsByCurrency,
+            Map<String, List<Transaction>> salesByCurrency) {
+        synchronized (ShopDataManager.class) {
+            return sellMaterialUnlocked(p, entry, payoutsByCurrency, salesByCurrency);
+        }
+    }
+
+    private int sellMaterialUnlocked(
             Player p,
             Map.Entry<String, Integer> entry,
             Map<String, Double> payoutsByCurrency,

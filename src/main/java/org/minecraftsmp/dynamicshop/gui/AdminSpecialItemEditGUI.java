@@ -219,7 +219,7 @@ public class AdminSpecialItemEditGUI {
                     }
 
                     // Reopen this GUI with fresh data
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         SpecialShopItem updated = plugin.getSpecialShopManager().getSpecialItem(item.getId());
                         if (updated != null) {
                             AdminSpecialItemEditGUI newGui = new AdminSpecialItemEditGUI(plugin, player, updated,
@@ -261,7 +261,7 @@ public class AdminSpecialItemEditGUI {
                     }
 
                     // Reopen this GUI with fresh data
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         SpecialShopItem updated = plugin.getSpecialShopManager().getSpecialItem(item.getId());
                         if (updated != null) {
                             AdminSpecialItemEditGUI newGui = new AdminSpecialItemEditGUI(plugin, player, updated,

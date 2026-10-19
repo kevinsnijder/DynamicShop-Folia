@@ -21,7 +21,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitTask;
+import org.minecraftsmp.dynamicshop.util.FoliaScheduler;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.util.PaperCompat;
 import org.minecraftsmp.dynamicshop.util.ShopItemBuilder;
@@ -33,7 +33,7 @@ public final class SellMenuManager implements Listener {
     private final SellBasketService sales;
     private final Map<UUID, Session> sessions = new ConcurrentHashMap<>();
     private final SellMenuPackets.Sender packets;
-    private BukkitTask refreshTask;
+    private FoliaScheduler.Task refreshTask;
     private boolean shuttingDown;
 
     public SellMenuManager(DynamicShop plugin) {
@@ -47,14 +47,19 @@ public final class SellMenuManager implements Listener {
     }
 
     public void start() {
-        refreshTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        refreshTask = FoliaScheduler.runGlobalTimer(plugin, () -> {
             for (Session session : List.copyOf(sessions.values())) {
-                if (!allowed(session.owner)) {
-                    session.owner.closeInventory();
-                    close(session);
-                } else if (!session.processing) refresh(session);
+                FoliaScheduler.runForEntity(plugin, session.owner, () -> refreshOwned(session));
             }
         }, 20L, 20L);
+    }
+
+    private void refreshOwned(Session session) {
+        if (session.closed) return;
+        if (!allowed(session.owner)) {
+            session.owner.closeInventory();
+            close(session);
+        } else if (!session.processing) refresh(session);
     }
 
     private boolean allowed(Player player) {
@@ -139,7 +144,7 @@ public final class SellMenuManager implements Listener {
     private void sendDisplaysLater(Session session) {
         if (session.displayPending) return;
         session.displayPending = true;
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        FoliaScheduler.runForEntity(plugin, session.owner, () -> {
             session.displayPending = false;
             sendDisplays(session);
         });
@@ -187,7 +192,7 @@ public final class SellMenuManager implements Listener {
             if (slot != ACCEPT && slot != CANCEL) return;
             session.processing = true;
             var approved = session.quote;
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            FoliaScheduler.runForEntity(plugin, session.owner, () -> {
                 if (session.closed) return;
                 if (slot == CANCEL) {
                     session.owner.closeInventory();
@@ -258,7 +263,7 @@ public final class SellMenuManager implements Listener {
     private void refreshLater(Session session) {
         if (session.refreshPending) return;
         session.refreshPending = true;
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        FoliaScheduler.runForEntity(plugin, session.owner, () -> {
             session.refreshPending = false;
             if (!session.closed && !session.processing) refresh(session);
         });
@@ -301,7 +306,7 @@ public final class SellMenuManager implements Listener {
                 drop.setOwner(session.owner.getUniqueId());
             }
         }
-        if (!shuttingDown) Bukkit.getScheduler().runTask(plugin, session.owner::updateInventory);
+        if (!shuttingDown) FoliaScheduler.runForEntity(plugin, session.owner, session.owner::updateInventory);
     }
 
     public void shutdown() {

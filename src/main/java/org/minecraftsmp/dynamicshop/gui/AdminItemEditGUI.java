@@ -408,7 +408,7 @@ public class AdminItemEditGUI {
                         }
                     }
                     // Reopen this GUI with a NEW instance to avoid stale onClose handler
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminItemEditGUI newGUI = new AdminItemEditGUI(plugin, player, material, parentGUI);
                         plugin.getShopListener().registerAdminEdit(player, newGUI);
                         newGUI.open();
@@ -446,7 +446,7 @@ public class AdminItemEditGUI {
                         }
                     }
                     // Reopen this GUI with a NEW instance to avoid stale onClose handler
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminItemEditGUI newGUI = new AdminItemEditGUI(plugin, player, material, parentGUI);
                         plugin.getShopListener().registerAdminEdit(player, newGUI);
                         newGUI.open();
@@ -476,7 +476,7 @@ public class AdminItemEditGUI {
                         ShopDataManager.setMaxStock(material, newVal < 0 ? null : newVal);
                         player.sendMessage("§a✓ §7Max stock (pricing limit) updated.");
                     }
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminItemEditGUI newGUI = new AdminItemEditGUI(plugin, player, material, parentGUI);
                         plugin.getShopListener().registerAdminEdit(player, newGUI);
                         newGUI.open();
@@ -506,7 +506,7 @@ public class AdminItemEditGUI {
                         ShopDataManager.setMaxStockStorage(material, newVal < 0 ? null : newVal);
                         player.sendMessage("§a✓ §7Max stock storage (hard limit) updated.");
                     }
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntity(plugin, player, () -> {
                         AdminItemEditGUI newGUI = new AdminItemEditGUI(plugin, player, material, parentGUI);
                         plugin.getShopListener().registerAdminEdit(player, newGUI);
                         newGUI.open();

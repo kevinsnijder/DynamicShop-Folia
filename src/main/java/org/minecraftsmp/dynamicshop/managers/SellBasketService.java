@@ -128,7 +128,14 @@ public final class SellBasketService {
                 : ShopDataManager.getTotalVariantSellValue(target.variantId, target.material, target.basePrice, amount);
     }
 
+    /** Re-quotes and pays out under the shop lock so concurrent regions cannot race. */
     public Result sell(Player player, Inventory inventory, Quote approved) {
+        synchronized (ShopDataManager.class) {
+            return sellUnlocked(player, inventory, approved);
+        }
+    }
+
+    private Result sellUnlocked(Player player, Inventory inventory, Quote approved) {
         if (!plugin.getConfig().getBoolean("gui.sell_menu_enabled", true)
                 || !player.hasPermission("dynamicshop.use") || !player.hasPermission("dynamicshop.use.sellgui"))
             return new Result(Status.DENIED, 0, Map.of());

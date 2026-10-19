@@ -5,7 +5,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitTask;
+import org.minecraftsmp.dynamicshop.util.FoliaScheduler;
 import org.minecraftsmp.dynamicshop.DynamicShop;
 import org.minecraftsmp.dynamicshop.category.ItemCategory;
 
@@ -73,8 +73,8 @@ public class ShopDataManager {
     private static File shopDataFile;
     private static YamlConfiguration shopDataConfig;
 
-    public static BukkitTask saveTimer;
-    private static BukkitTask shortageTicker;
+    public static FoliaScheduler.Task saveTimer;
+    private static FoliaScheduler.Task shortageTicker;
 
     // ------------------------------------------------------------------------
     // INIT
@@ -101,9 +101,7 @@ public class ShopDataManager {
             if (saveTimer == null || saveTimer.isCancelled()) {
                 int seconds = ConfigCacheManager.crossServerSaveInterval;
                 saveTimer =
-                        plugin.getServer()
-                                .getScheduler()
-                                .runTaskTimer(
+                        FoliaScheduler.runGlobalTimer(
                                         plugin,
                                         ShopDataManager::saveQueuedItems,
                                         seconds * 20L,
@@ -118,9 +116,7 @@ public class ShopDataManager {
             shortageTicker.cancel();
         }
         shortageTicker =
-                plugin.getServer()
-                        .getScheduler()
-                        .runTaskTimer(
+                FoliaScheduler.runGlobalTimer(
                                 plugin,
                                 ShopDataManager::tickAllShortage,
                                 72000L,
@@ -350,14 +346,14 @@ public class ShopDataManager {
         return Collections.unmodifiableSet(variantStockMap.keySet());
     }
 
-    public static void setVariantStock(String variantId, double stock) {
+    public static synchronized void setVariantStock(String variantId, double stock) {
         accumulateVariantShortage(variantId);
         variantStockMap.put(variantId, stock);
         variantLastUpdateMap.put(variantId, System.currentTimeMillis());
         markVariantDirty(variantId);
     }
 
-    public static void setVariantStockDirect(String variantId, double stock) {
+    public static synchronized void setVariantStockDirect(String variantId, double stock) {
         if (variantId == null) {
             return;
         }
@@ -366,7 +362,7 @@ public class ShopDataManager {
         markVariantDirty(variantId);
     }
 
-    public static void setVariantPurchasesDirect(String variantId, double purchases) {
+    public static synchronized void setVariantPurchasesDirect(String variantId, double purchases) {
         if (variantId == null) {
             return;
         }
@@ -459,7 +455,7 @@ public class ShopDataManager {
     /**
      * Update variant stock after a buy/sell transaction.
      */
-    public static void updateVariantStock(String variantId, double delta) {
+    public static synchronized void updateVariantStock(String variantId, double delta) {
         if (variantId == null) {
             return;
         }
@@ -1271,7 +1267,7 @@ public class ShopDataManager {
     // ------------------------------------------------------------------------
     // SPECIAL DIRECT SETTERS (NO P2P)
     // ------------------------------------------------------------------------
-    public static void setStockDirect(Material mat, double stock) {
+    public static synchronized void setStockDirect(Material mat, double stock) {
         // Capture current shortage before changing anything
         accumulateShortage(mat);
 
@@ -1310,7 +1306,7 @@ public class ShopDataManager {
         markDirty(mat);
     }
 
-    public static void setPurchasesDirect(Material mat, double purchases) {
+    public static synchronized void setPurchasesDirect(Material mat, double purchases) {
         purchasesMap.put(mat, purchases);
         markDirty(mat);
     }
@@ -1318,7 +1314,7 @@ public class ShopDataManager {
     // ------------------------------------------------------------------------
     // STOCK UPDATES (WITH P2P BROADCAST)
     // ------------------------------------------------------------------------
-    public static void updateStock(Material mat, double delta) {
+    public static synchronized void updateStock(Material mat, double delta) {
         // Capture shortage before update
         accumulateShortage(mat);
 
@@ -1365,7 +1361,7 @@ public class ShopDataManager {
      * shopdata.yml.
      * Used on plugin shutdown and before certain cross-server sync operations.
      */
-    public static void flushQueue() {
+    public static synchronized void flushQueue() {
         saveQueuedItems();
     }
 
@@ -1403,7 +1399,7 @@ public class ShopDataManager {
     // ------------------------------------------------------------------------
     // DYNAMIC DATA SAVE / LOAD (YAML)
     // ------------------------------------------------------------------------
-    public static void saveDynamicData() {
+    public static synchronized void saveDynamicData() {
         ConfigurationSection itemsSec = shopDataConfig.getConfigurationSection("items");
         if (itemsSec == null) {
             itemsSec = shopDataConfig.createSection("items");
@@ -1446,7 +1442,7 @@ public class ShopDataManager {
         }
     }
 
-    public static void saveQueuedItems() {
+    public static synchronized void saveQueuedItems() {
         if (saveQueue.isEmpty() && variantSaveQueue.isEmpty()) return;
 
         ConfigurationSection itemsSec = shopDataConfig.getConfigurationSection("items");
@@ -1794,7 +1790,7 @@ public class ShopDataManager {
         return Math.max(0.0, Math.min(hours, correctedHours));
     }
 
-    public static void setHoursInShortage(Material mat, double hours) {
+    public static synchronized void setHoursInShortage(Material mat, double hours) {
         shortageHoursMap.put(mat, hours);
         markDirty(mat);
     }
@@ -1804,7 +1800,7 @@ public class ShopDataManager {
      * Called every 5 minutes so items passively gain/lose shortage
      * even without player transactions.
      */
-    public static void tickAllShortage() {
+    public static synchronized void tickAllShortage() {
         long now = System.currentTimeMillis();
         for (Material mat : itemConfigs.keySet()) {
             if (getBasePrice(mat) < 0) continue; // skip disabled
@@ -1817,7 +1813,7 @@ public class ShopDataManager {
         }
     }
 
-    public static void addHoursInShortage(Material mat, double deltaHours) {
+    public static synchronized void addHoursInShortage(Material mat, double deltaHours) {
         shortageHoursMap.put(mat, getHoursInShortage(mat) + deltaHours);
         markDirty(mat);
     }

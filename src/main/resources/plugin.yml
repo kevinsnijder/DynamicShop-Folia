@@ -3,11 +3,12 @@ name: DynamicShop
 version: '@project.version@'
 main: org.minecraftsmp.dynamicshop.DynamicShop
 api-version: '1.20'
+folia-supported: true
 author: selfservice0
 description: A dynamic economy shop with player-interactive GUI
 website: https://minecraftsmp.org
 
-depend: [Vault, ProtocolLib]
+depend: [Vault]
 softdepend: [PlaceholderAPI, ItemsAdder, Nexo, Oraxen, CoinsEngine, floodgate, ValhallaMMO]
 
 commands:

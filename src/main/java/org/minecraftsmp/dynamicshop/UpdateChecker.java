@@ -21,7 +21,7 @@ import java.util.logging.Level;
 public class UpdateChecker implements Listener {
 
     private static final String GITHUB_API_URL =
-            "https://api.github.com/repos/selfservice0/DynamicShop/releases/latest";
+            "https://api.github.com/repos/kevinsnijder/DynamicShop-Folia/releases/latest";
 
     private final DynamicShop plugin;
     private String latestVersion = null;
@@ -35,7 +35,7 @@ public class UpdateChecker implements Listener {
      * Kick off an async check against the GitHub releases API.
      */
     public void check() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runAsync(plugin, () -> {
             try {
                 URL url = URI.create(GITHUB_API_URL).toURL();
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -77,7 +77,7 @@ public class UpdateChecker implements Listener {
                     updateAvailable = true;
                     plugin.getLogger().info("§e[UpdateChecker] A new version is available: §a" + latestVersion
                             + " §e(you are running §c" + currentVersion + "§e)");
-                    plugin.getLogger().info("§e[UpdateChecker] Download: https://github.com/selfservice0/DynamicShop/releases/latest");
+                    plugin.getLogger().info("§e[UpdateChecker] Download: https://github.com/kevinsnijder/DynamicShop-Folia/releases/latest");
                 } else {
                     plugin.getLogger().info("[UpdateChecker] You are running the latest version (" + currentVersion + ").");
                 }
@@ -95,7 +95,7 @@ public class UpdateChecker implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player operator=event.getPlayer();
         if(operator.hasPermission("dynamicshop.admin") && plugin.getConfig().getBoolean("webserver.enabled", false)) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(plugin, operator, () -> {
                 if(!operator.isOnline() || plugin.getWebServer()==null)return;
                 try {if(Boolean.TRUE.equals(plugin.getWebServer().webFiles().status().get("needsUpdate")))operator.sendMessage("§e[DynamicShop] §fYour website files need updating. Run §a/shopadmin webupdate §fto back them up and install the bundled website, or use Administration → Actions → Update website files.");}
                 catch(java.io.IOException e){plugin.getLogger().warning("Could not check installed website files: "+e.getMessage());}
@@ -107,12 +107,12 @@ public class UpdateChecker implements Listener {
         if (!player.isOp()) return;
 
         // Delay the message so it doesn't get buried in join spam
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        org.minecraftsmp.dynamicshop.util.FoliaScheduler.runForEntityLater(plugin, player, () -> {
             if (player.isOnline()) {
                 String currentVersion = plugin.getDescription().getVersion();
                 player.sendMessage("§e[DynamicShop] §fA new version is available: §a" + latestVersion
                         + " §f(you are running §c" + currentVersion + "§f)");
-                player.sendMessage("§e[DynamicShop] §fDownload: §bhttps://github.com/selfservice0/DynamicShop/releases/latest");
+                player.sendMessage("§e[DynamicShop] §fDownload: §bhttps://github.com/kevinsnijder/DynamicShop-Folia/releases/latest");
             }
         }, 60L); // 3 second delay
     }

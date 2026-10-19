@@ -35,11 +35,17 @@ public final class SellBasketService {
                 Line a = lines.get(i), b = other.lines.get(i);
                 if (a.slot != b.slot || a.accepted != b.accepted || a.original.getAmount() != b.original.getAmount()
                         || !a.original.isSimilar(b.original) || !b.original.isSimilar(a.original)
-                        || Double.compare(a.value, b.value) != 0 || !Objects.equals(a.currency, b.currency)
+                        || !sameValue(a.value, b.value) || !Objects.equals(a.currency, b.currency)
                         || !Objects.equals(a.reason, b.reason)
                         || !Objects.equals(a.target == null ? null : a.target.key(), b.target == null ? null : b.target.key())) return false;
             }
             return true;
+        }
+
+        /** Prices that drift with shortage time still match the total the player reviewed. */
+        static boolean sameValue(double shown, double current) {
+            if (Double.compare(shown, current) == 0) return true;
+            return Math.abs(shown - current) <= Math.max(0.01, Math.abs(shown) * 0.001);
         }
     }
     public enum Status { SOLD, CHANGED, EMPTY, DENIED, COOLDOWN }

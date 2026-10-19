@@ -12,12 +12,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Handles loading and formatting messages from messages.yml
  * Supports color codes and placeholders
  */
 public class MessageManager {
+
+    private static final Pattern REPEATED_HEX =
+            Pattern.compile("[&§][xX]((?:[&§][0-9a-fA-F]){6})");
+    private static final Pattern SHORT_HEX = Pattern.compile("[&§]#([0-9a-fA-F]{6})");
+    private static final LegacyComponentSerializer LEGACY_HEX =
+            LegacyComponentSerializer.builder().character('&').hexColors().build();
 
     private final DynamicShop plugin;
     private FileConfiguration messagesConfig;
@@ -107,6 +114,8 @@ public class MessageManager {
             message = message.replace("{" + entry.getKey() + "}", entry.getValue());
         }
 
+        message = expandHex(message);
+
         // Apply color codes
         message = message.replace('&', '§');
 
@@ -176,14 +185,33 @@ public class MessageManager {
         }
 
         // Keep existing legacy messages and raw Unicode glyphs compatible.
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(text.replace('§', '&'));
+        return LEGACY_HEX.deserialize(shortenHex(text.replace('§', '&')));
     }
 
     /**
      * Convert legacy & color codes to MiniMessage format.
      * e.g. "&f" -> "<white>", "&0&l" -> "<black><bold>"
      */
+    /** Turns &#RRGGBB into the &x&R&R&G&G&B&B form that legacy chat strings understand. */
+    static String expandHex(String text) {
+        return SHORT_HEX.matcher(text).replaceAll(match -> {
+            StringBuilder out = new StringBuilder("&x");
+            for (char c : match.group(1).toCharArray()) {
+                out.append('&').append(c);
+            }
+            return out.toString();
+        });
+    }
+
+    /** Turns &x&R&R&G&G&B&B back into &#RRGGBB so component parsers read a single hex form. */
+    static String shortenHex(String text) {
+        return REPEATED_HEX.matcher(text)
+                .replaceAll(match -> "&#" + match.group(1).replaceAll("[&§]", ""));
+    }
+
     private static String convertLegacyToMiniMessage(String text) {
+        text = SHORT_HEX.matcher(shortenHex(text)).replaceAll("<#$1>");
+
         // Replace formatting codes first (order matters - do these before colors)
         text = text.replace("&l", "<bold>").replace("&L", "<bold>");
         text = text.replace("&o", "<italic>").replace("&O", "<italic>");
@@ -232,7 +260,7 @@ public class MessageManager {
         if (message == null) {
             return null; // Message is disabled
         }
-        String prefixColored = prefix.replace('&', '§');
+        String prefixColored = expandHex(prefix).replace('&', '§');
         return prefixColored + message;
     }
 

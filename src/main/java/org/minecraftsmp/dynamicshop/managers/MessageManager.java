@@ -114,12 +114,12 @@ public class MessageManager {
             message = message.replace("{" + entry.getKey() + "}", entry.getValue());
         }
 
-        message = expandHex(message);
+        return toLegacy(message);
+    }
 
-        // Apply color codes
-        message = message.replace('&', '§');
-
-        return message;
+    /** Turns & colour codes, including &#RRGGBB, into the section-sign form that chat strings use. */
+    public static String toLegacy(String text) {
+        return expandHex(text).replace('&', '§');
     }
 
     /**

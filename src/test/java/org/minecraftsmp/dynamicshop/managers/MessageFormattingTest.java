@@ -57,6 +57,7 @@ public class MessageFormattingTest {
         assertEquals("&x&8&E&5&F&B&0Shop &7done", MessageManager.expandHex("&#8E5FB0Shop &7done"));
         assertEquals("&#8E5FB0Shop", MessageManager.shortenHex("&x&8&E&5&F&B&0Shop"));
         assertEquals("&6No hex here", MessageManager.expandHex("&6No hex here"));
+        assertEquals("§f§x§F§2§B§9§4§A 1.23 coins", MessageManager.toLegacy("&f&#F2B94A 1.23 coins"));
     }
 
     private static String plain(String text) {

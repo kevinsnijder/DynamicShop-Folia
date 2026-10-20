@@ -12,6 +12,7 @@ import org.minecraftsmp.dynamicshop.category.ItemCategory;
 import org.minecraftsmp.dynamicshop.gui.CategorySelectionGUI;
 import org.minecraftsmp.dynamicshop.gui.ShopGUI;
 import org.minecraftsmp.dynamicshop.managers.CategoryConfigManager;
+import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.transactions.Transaction;
 import org.minecraftsmp.dynamicshop.util.ShopItemNames;
@@ -350,7 +351,7 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                         + " items §7(§e"
                         + paidTypes
                         + " types§7) for §a"
-                        + payoutSummary);
+                        + MessageManager.toLegacy(payoutSummary.toString()));
 
         return true;
     }

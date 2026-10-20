@@ -53,6 +53,10 @@ gui:
   # Set to false to revert to classic left/right click buy/sell.
   use_dialog_gui: false
 
+  # Hide items that can only be sold (disable-buy) from the /shop pages, All Items and search.
+  # They can still be sold with /sell and /shop sellall.
+  hide-sell-only-items: false
+
 # ================================================================
 # WEB SERVER SETTINGS
 # ================================================================

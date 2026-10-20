@@ -124,7 +124,7 @@ public class CategorySelectionGUI {
             // Return number of active player shops
             return plugin.getPlayerShopManager().getActiveShopOwners().size();
         } else {
-            int normalItems = ShopDataManager.getItemsInCategory(category).size();
+            int normalItems = ShopDataManager.getBrowsableItemsInCategory(category).size();
             long specialItems = plugin.getSpecialShopManager().getAllSpecialItems().values().stream()
                     .filter(item -> item.getCategory() == category)
                     .count();

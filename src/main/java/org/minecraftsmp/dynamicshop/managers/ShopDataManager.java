@@ -1268,6 +1268,18 @@ public class ShopDataManager {
     }
 
     /**
+     * Items players can browse in a category: like getItemsInCategory, but without buy-disabled
+     * items when gui.hide-sell-only-items is on. Those stay sellable through /sell and sellall.
+     */
+    public static List<Material> getBrowsableItemsInCategory(ItemCategory cat) {
+        List<Material> result = getItemsInCategory(cat);
+        if (ConfigCacheManager.hideSellOnlyItems) {
+            result.removeIf(ShopDataManager::isBuyDisabled);
+        }
+        return result;
+    }
+
+    /**
      * Get items in category WITHOUT filtering disabled items (for admin GUI)
      */
     public static List<Material> getItemsInCategoryIncludeDisabled(ItemCategory cat) {

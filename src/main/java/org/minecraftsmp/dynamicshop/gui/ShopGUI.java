@@ -85,7 +85,7 @@ public class ShopGUI {
             this.maxPage = specialItems.isEmpty() ? 0 : (specialItems.size() - 1) / itemsPerPage;
         } else {
             // Load regular items from ShopDataManager
-            this.allItems = ShopDataManager.getItemsInCategory(category);
+            this.allItems = ShopDataManager.getBrowsableItemsInCategory(category);
             if (allItems == null) allItems = List.of();
 
             // Also load any special items assigned to this category (e.g., enchanted variants)

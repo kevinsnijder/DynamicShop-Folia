@@ -48,7 +48,7 @@ public class SearchResultsGUI {
 
         // Get items to search through
         List<Material> searchPool =
-                ShopDataManager.getItemsInCategory(category != null ? category : ItemCategory.MISC);
+                ShopDataManager.getBrowsableItemsInCategory(category != null ? category : ItemCategory.MISC);
 
         // Search the name players see, including names stored on item templates.
         // Named custom items must not also match their underlying vanilla material.

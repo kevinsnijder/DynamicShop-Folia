@@ -48,6 +48,7 @@ public class ConfigCacheManager {
     public static int shopMenuSize = 54;
     public static String fillerMaterialStr = "AIR";
     public static boolean useDialogGui = false;
+    public static boolean hideSellOnlyItems = false;
 
     // WEB SERVER SETTINGS
     public static boolean webServerEnabled = true;
@@ -123,6 +124,7 @@ public class ConfigCacheManager {
         shopMenuSize = plugin.getConfig().getInt("gui.shop_menu_size", 54);
         fillerMaterialStr = plugin.getConfig().getString("gui.filler_material", "AIR");
         useDialogGui = plugin.getConfig().getBoolean("gui.use_dialog_gui", false);
+        hideSellOnlyItems = plugin.getConfig().getBoolean("gui.hide-sell-only-items", false);
     }
 
     /**

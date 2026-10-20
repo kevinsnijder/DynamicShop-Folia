@@ -58,6 +58,8 @@ public class ShopDataManager {
     // Custom display names for shop items (overrides material name in GUI)
     private static final Map<Material, String> customNames = new ConcurrentHashMap<>();
 
+    private static final Map<Material, Integer> configOrder = new ConcurrentHashMap<>();
+
     // Item templates (items with custom components like enchantments, names, lore)
     // Stored in config.yml under items.MATERIAL.template
     private static final Map<Material, ItemStack> itemTemplates = new ConcurrentHashMap<>();
@@ -87,6 +89,7 @@ public class ShopDataManager {
         categoryItems.clear();
         categoryOverrides.clear();
         customNames.clear();
+        configOrder.clear();
         itemTemplates.clear();
 
         loadConfigItems();
@@ -198,6 +201,7 @@ public class ShopDataManager {
                             overrideCat,
                             stockRate);
             itemConfigs.put(mat, config);
+            configOrder.putIfAbsent(mat, configOrder.size());
 
             loaded++;
         }
@@ -1231,7 +1235,11 @@ public class ShopDataManager {
         }
 
         for (List<Material> list : categoryItems.values()) {
-            list.sort(Comparator.comparing(Enum::name));
+            list.sort(
+                    Comparator.comparingInt(
+                                    (Material mat) ->
+                                            configOrder.getOrDefault(mat, Integer.MAX_VALUE))
+                            .thenComparing(Enum::name));
         }
     }
 

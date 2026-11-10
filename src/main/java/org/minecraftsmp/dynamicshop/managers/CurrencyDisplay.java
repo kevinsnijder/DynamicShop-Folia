@@ -22,7 +22,7 @@ public final class CurrencyDisplay {
     }
 
     public static String format(String template, double amount, String singular, String plural) {
-        return template(template).replace("<money>", String.format(Locale.US, "%,.2f", amount))
+        return template(template).replace("<money>", String.format(Locale.US, ConfigCacheManager.wholeCoins ? "%,.0f" : "%,.2f", amount))
                 .replace("<currency>", Math.abs(amount) == 1.0 ? singular : plural)
                 .replace("<currency_singular>", singular)
                 .replace("<currency_plural>", plural);

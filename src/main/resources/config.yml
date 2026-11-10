@@ -24,6 +24,9 @@ economy:
   # 30 = players get 70% of item value when selling
   sell_tax_percent: 30
 
+  # Round every shop price to whole coins: sales pay out rounded down, purchases cost the nearest coin.
+  whole-coins: false
+
   # Cooldown between transactions (milliseconds)
   # Set to 0 to disable
   transaction_cooldown_ms: 0 #500 == 0.5 second

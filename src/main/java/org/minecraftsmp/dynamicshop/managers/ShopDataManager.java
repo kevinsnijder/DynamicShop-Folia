@@ -693,7 +693,7 @@ public class ShopDataManager {
         double B = cfg.basePrice;
 
         if (!ConfigCacheManager.dynamicPricingEnabled) {
-            return validQuote(B * amount);
+            return wholeBuy(validQuote(B * amount));
         }
 
         double s0 = getStock(mat);
@@ -714,7 +714,7 @@ public class ShopDataManager {
 
         double total = computeBuyIntegral(B, a, b, L, minStock, k, q, t);
         logDynamicPricing("BUY", mat.name(), B, s0, amount, h, t, k, q, total);
-        return validQuote(total);
+        return wholeBuy(validQuote(total));
     }
 
     // ============================================================================
@@ -732,7 +732,7 @@ public class ShopDataManager {
         double tax = ConfigCacheManager.sellTaxPercent;
 
         if (!ConfigCacheManager.dynamicPricingEnabled) {
-            return applySellTax(B * amount, tax);
+            return wholeSell(applySellTax(B * amount, tax));
         }
 
         double s0 = getStock(mat);
@@ -751,7 +751,7 @@ public class ShopDataManager {
         if (validQuote(total) < 0) return -1.0;
         double taxedTotal = applySellTax(total, tax);
         logDynamicPricing("SELL", mat.name(), B, s0, amount, h, t, k, q, taxedTotal);
-        return validQuote(taxedTotal);
+        return wholeSell(validQuote(taxedTotal));
     }
 
     public static double getTotalVariantBuyCost(
@@ -761,7 +761,7 @@ public class ShopDataManager {
             return -1.0;
 
         if (!ConfigCacheManager.dynamicPricingEnabled) {
-            return validQuote(basePrice * amount);
+            return wholeBuy(validQuote(basePrice * amount));
         }
 
         double s0 = getVariantStock(variantId);
@@ -782,7 +782,7 @@ public class ShopDataManager {
 
         double total = computeBuyIntegral(basePrice, a, b, L, minStock, k, q, t);
         logDynamicPricing("BUY", "variant:" + variantId, basePrice, s0, amount, h, t, k, q, total);
-        return validQuote(total);
+        return wholeBuy(validQuote(total));
     }
 
     public static double getTotalVariantSellValue(
@@ -797,7 +797,7 @@ public class ShopDataManager {
         double tax = ConfigCacheManager.sellTaxPercent;
 
         if (!ConfigCacheManager.dynamicPricingEnabled) {
-            return applySellTax(basePrice * amount, tax);
+            return wholeSell(applySellTax(basePrice * amount, tax));
         }
 
         double s0 = getVariantStock(variantId);
@@ -817,7 +817,7 @@ public class ShopDataManager {
         double taxedTotal = applySellTax(total, tax);
         logDynamicPricing(
                 "SELL", "variant:" + variantId, basePrice, s0, amount, h, t, k, q, taxedTotal);
-        return validQuote(taxedTotal);
+        return wholeSell(validQuote(taxedTotal));
     }
 
     private static boolean validQuantity(double amount) {
@@ -844,6 +844,24 @@ public class ShopDataManager {
 
     private static double validQuote(double value) {
         return Double.isFinite(value) && value >= 0 ? value : -1.0;
+    }
+
+    /**
+     * With economy.whole-coins on, a purchase costs the nearest whole coin (at least 1 for a
+     * non-zero price). Invalid quotes pass through unchanged.
+     */
+    static double wholeBuy(double quote) {
+        if (!ConfigCacheManager.wholeCoins || quote <= 0) return quote;
+        return Math.max(1.0, Math.floor(quote + 0.5));
+    }
+
+    /**
+     * With economy.whole-coins on, a sale pays out rounded down to a whole coin, so splitting a
+     * sale can never earn more than selling everything at once. Invalid quotes pass through.
+     */
+    static double wholeSell(double quote) {
+        if (!ConfigCacheManager.wholeCoins || quote <= 0) return quote;
+        return Math.floor(quote + 1e-9);
     }
 
     /**

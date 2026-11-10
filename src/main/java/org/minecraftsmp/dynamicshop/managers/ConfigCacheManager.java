@@ -14,6 +14,7 @@ public class ConfigCacheManager {
     public static String economySystem = "vault";
     public static String defaultCurrency = "coins";
     public static double sellTaxPercent = 0.30;
+    public static boolean wholeCoins = false;
     public static long transactionCooldownMs = 0L;
 
     // DYNAMIC PRICING SETTINGS
@@ -94,6 +95,7 @@ public class ConfigCacheManager {
         economySystem = plugin.getConfig().getString("economy.system", "vault");
         defaultCurrency = plugin.getConfig().getString("economy.default_currency", "coins");
         sellTaxPercent = plugin.getConfig().getDouble("economy.sell_tax_percent", 0.30) / 100.0;
+        wholeCoins = plugin.getConfig().getBoolean("economy.whole-coins", false);
         transactionCooldownMs = plugin.getConfig().getLong("economy.transaction_cooldown_ms", 0L);
     }
 

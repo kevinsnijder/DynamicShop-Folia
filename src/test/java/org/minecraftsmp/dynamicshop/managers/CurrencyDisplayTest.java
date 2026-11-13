@@ -83,6 +83,14 @@ public class CurrencyDisplayTest {
         assertEquals("🪙 <money>", CurrencyDisplay.websiteSettings("", "coin", "coins", "§61.00", "§6🪙 2.00").get("format"));
     }
 
+    @Test public void websiteDropsResourcePackGlyphsButKeepsEmoji() {
+        var settings = CurrencyDisplay.websiteSettings("&f&#F2B94A <money> <currency>", "coin", "coins", "", "");
+        assertEquals("<money> <currency>", settings.get("format"));
+        assertEquals("🪙 <money>", CurrencyDisplay.websiteSettings("🪙 <money>", "", "", "", "").get("format"));
+        assertEquals("Tools", org.minecraftsmp.dynamicshop.util.WebText.plain("&#B98FD6&lTools"));
+        assertEquals("Colored Blocks", org.minecraftsmp.dynamicshop.util.WebText.plain("<#B98FD6><bold>Colored Blocks"));
+    }
+
     @Test public void invalidTemplateFallsBackToTheProvider() throws Exception {
         var plugin = PluginTestFixture.plugin(directory.getRoot());
         var manager = new MultiCurrencyEconomyManager(plugin);

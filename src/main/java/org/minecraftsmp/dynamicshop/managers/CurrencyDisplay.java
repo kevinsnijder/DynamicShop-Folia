@@ -4,6 +4,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.minecraftsmp.dynamicshop.util.WebText;
 
 /** Shared display templates; these never change the currency used for payments. */
 public final class CurrencyDisplay {
@@ -51,8 +52,8 @@ public final class CurrencyDisplay {
                 .replace("<currency>", "DS_CURRENCY_TOKEN")
                 .replace("<currency_singular>", "DS_SINGULAR_TOKEN")
                 .replace("<currency_plural>", "DS_PLURAL_TOKEN");
-        return PlainTextComponentSerializer.plainText()
-                .serialize(MessageManager.parseComponent(protectedText))
+        return WebText.withoutGlyphs(PlainTextComponentSerializer.plainText()
+                        .serialize(MessageManager.parseComponent(protectedText)))
                 .replace("DS_MONEY_TOKEN", "<money>")
                 .replace("DS_CURRENCY_TOKEN", "<currency>")
                 .replace("DS_SINGULAR_TOKEN", "<currency_singular>")

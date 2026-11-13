@@ -27,6 +27,7 @@ import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.models.PlayerShopListing;
 import org.minecraftsmp.dynamicshop.transactions.Transaction;
 import org.minecraftsmp.dynamicshop.util.ShopItemNames;
+import org.minecraftsmp.dynamicshop.util.WebText;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -1107,7 +1108,7 @@ public class WebServer {
     }
 
     private String getCategoryDisplayName(ItemCategory category) {
-        return CategoryConfigManager.getDisplayName(category);
+        return WebText.plain(CategoryConfigManager.getDisplayName(category));
     }
 
     private String prettifyItemName(String name) {

@@ -652,10 +652,11 @@ public class MultiCurrencyEconomyManager {
     }
 
     /** Call on the server thread because economy providers may use Bukkit state. */
-    public Map<String, String> getWebsiteCurrencySettings() {
+    public Map<String, Object> getWebsiteCurrencySettings() {
         return CurrencyDisplay.websiteSettings(
                 plugin.getConfig().getString("economy.currency_format", ""),
-                currencyName(true), currencyName(false), format(1.0), format(2.0));
+                currencyName(true), currencyName(false), format(1.0), format(2.0),
+                plugin.getConfig().getString("economy.currency_icon", ""), ConfigCacheManager.wholeCoins);
     }
 
     private record SalePaymentFailure(String outcome, String error) {}

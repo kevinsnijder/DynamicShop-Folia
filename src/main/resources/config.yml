@@ -19,6 +19,9 @@ economy:
   currency_format: ""
   currency_singular_name: "" # Empty uses the provider name, falling back to coin.
   currency_plural_name: "" # Empty uses the provider name, falling back to coins.
+  # Web dashboard only: an image shown where currency_format uses a resource pack glyph (such as an Oraxen coin).
+  # A file name in plugins/DynamicShop/web/ (for example "coin.png") or a full image URL. Empty removes the glyph.
+  currency_icon: ""
 
   # Sell tax percentage (how much less players get when selling)
   # 30 = players get 70% of item value when selling

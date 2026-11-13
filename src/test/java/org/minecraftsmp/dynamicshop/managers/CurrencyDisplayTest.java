@@ -91,6 +91,16 @@ public class CurrencyDisplayTest {
         assertEquals("Colored Blocks", org.minecraftsmp.dynamicshop.util.WebText.plain("<#B98FD6><bold>Colored Blocks"));
     }
 
+    @Test public void websiteShowsTheConfiguredIconWhereTheGlyphWas() {
+        var settings = CurrencyDisplay.websiteSettings(
+                "&f&#F2B94A <money> <currency>", "coin", "coins", "", "", "coin.png", true);
+        assertEquals("<icon> <money> <currency>", settings.get("format"));
+        assertEquals("<icon> <money> <currency>", settings.get("singularFormat"));
+        assertEquals("coin.png", settings.get("icon"));
+        assertEquals(true, settings.get("wholeCoins"));
+        assertEquals(false, CurrencyDisplay.websiteSettings("<money>", "", "", "", "").get("wholeCoins"));
+    }
+
     @Test public void invalidTemplateFallsBackToTheProvider() throws Exception {
         var plugin = PluginTestFixture.plugin(directory.getRoot());
         var manager = new MultiCurrencyEconomyManager(plugin);

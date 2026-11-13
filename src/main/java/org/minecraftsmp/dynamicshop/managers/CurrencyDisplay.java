@@ -30,30 +30,40 @@ public final class CurrencyDisplay {
     }
 
     /** A browser can inherit a provider's prefix/suffix without receiving Minecraft markup. */
-    public static Map<String, String> websiteSettings(
+    public static Map<String, Object> websiteSettings(
             String override, String singular, String plural, String one, String two) {
-        String format = template(override);
-        return Map.of(
-                "format", format.isEmpty() ? providerTemplate(two) : plain(format),
-                "singularFormat", format.isEmpty() ? providerTemplate(one) : plain(format),
-                "singularName", plain(singular), "pluralName", plain(plural));
+        return websiteSettings(override, singular, plural, one, two, "", false);
     }
 
-    private static String providerTemplate(String formatted) {
-        String text = plain(formatted);
+    /** With an icon image set, the resource pack glyph in the format becomes an <icon> token for the browser. */
+    public static Map<String, Object> websiteSettings(
+            String override, String singular, String plural, String one, String two,
+            String icon, boolean wholeCoins) {
+        String iconUrl = icon == null ? "" : icon.trim();
+        String glyph = iconUrl.isEmpty() ? "" : "<icon>";
+        String format = template(override);
+        return Map.of(
+                "format", format.isEmpty() ? providerTemplate(two, glyph) : plain(format, glyph),
+                "singularFormat", format.isEmpty() ? providerTemplate(one, glyph) : plain(format, glyph),
+                "singularName", plain(singular, ""), "pluralName", plain(plural, ""),
+                "icon", iconUrl, "wholeCoins", wholeCoins);
+    }
+
+    private static String providerTemplate(String formatted, String glyph) {
+        String text = plain(formatted, glyph);
         var number = NUMBER.matcher(text);
         if (!number.find()) return "$<money>";
         return text.substring(0, number.start()) + "<money>" + text.substring(number.end());
     }
 
-    private static String plain(String text) {
+    private static String plain(String text, String glyph) {
         // Protect our template tokens while removing Minecraft color and MiniMessage tags.
         String protectedText = text.replace("<money>", "DS_MONEY_TOKEN")
                 .replace("<currency>", "DS_CURRENCY_TOKEN")
                 .replace("<currency_singular>", "DS_SINGULAR_TOKEN")
                 .replace("<currency_plural>", "DS_PLURAL_TOKEN");
-        return WebText.withoutGlyphs(PlainTextComponentSerializer.plainText()
-                        .serialize(MessageManager.parseComponent(protectedText)))
+        return WebText.replaceGlyphs(PlainTextComponentSerializer.plainText()
+                        .serialize(MessageManager.parseComponent(protectedText)), glyph)
                 .replace("DS_MONEY_TOKEN", "<money>")
                 .replace("DS_CURRENCY_TOKEN", "<currency>")
                 .replace("DS_SINGULAR_TOKEN", "<currency_singular>")

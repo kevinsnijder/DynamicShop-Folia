@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: [ '*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Build
+        run: JAVA_TOOL_OPTIONS='-Duser.language=en -Duser.country=US' mvn -B clean package
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+            exit 0
+          fi
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          title="$(git tag -l --format='%(contents:subject)' "$TAG")"
+          git tag -l --format='%(contents:body)' "$TAG" > "$RUNNER_TEMP/notes.md"
+          [ -n "$title" ] || title="$TAG"
+          jar="$(ls target/*.jar | grep -vE '/(original-|.*-(sources|javadoc)\.jar$)' | head -n 1)"
+          gh release create "$TAG" "$jar" --title "$title" --notes-file "$RUNNER_TEMP/notes.md" --latest

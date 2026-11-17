@@ -62,5 +62,5 @@ jobs:
           else
             git log -1 --format='%b' "$GITHUB_SHA" | grep -v '^Release-Tag:' > "$RUNNER_TEMP/notes.md"
           fi
-          jar="$(ls target/DynamicShop-*.jar | grep -vE '-(shaded|sources|javadoc).jar$' | head -n 1)"
+          jar="$(ls target/DynamicShop-*.jar | grep -vE -e '-(shaded|sources|javadoc).jar$' | head -n 1)"
           gh release create "$TAG" "$jar" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --latest

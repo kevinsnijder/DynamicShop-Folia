@@ -16,13 +16,40 @@ function saveWatchlist(){
 }
 let category='All',page='catalog',selected=null,watched=readWatchlist(),toastTimer;
 const $=id=>document.getElementById(id);
+const CURRENCY_ICON_MARK='';
 function money(n,numberText){
   if(n==null||!Number.isFinite(n))return 'Unavailable';
   const currency=website?.currency||{},template=(Math.abs(n)===1?currency.singularFormat:currency.format)||'$<money>';
-  const amount=numberText??n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const digits=currency.wholeCoins?0:2;
+  const amount=numberText??n.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
   const singular=currency.singularName||'coin',plural=currency.pluralName||'coins';
-  return template.replaceAll('<money>',amount).replaceAll('<currency>',Math.abs(n)===1?singular:plural).replaceAll('<currency_singular>',singular).replaceAll('<currency_plural>',plural);
+  return template.replaceAll('<money>',amount).replaceAll('<currency>',Math.abs(n)===1?singular:plural).replaceAll('<currency_singular>',singular).replaceAll('<currency_plural>',plural).replaceAll('<icon>',currency.icon?CURRENCY_ICON_MARK:'').trim();
 }
+/** Swaps the currency icon marker in rendered text for the configured icon image; SVG text and attributes just drop it. */
+function showCurrencyIcons(root){
+  const src=website?.currency?.icon;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:node=>node.nodeValue.includes(CURRENCY_ICON_MARK)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
+  const found=[];while(walker.nextNode())found.push(walker.currentNode);
+  for(const node of found){
+    const parent=node.parentNode;if(!parent)continue;
+    if(!src||parent.closest?.('svg,option,title,textarea,script,style')){node.nodeValue=node.nodeValue.replaceAll(CURRENCY_ICON_MARK,'');continue}
+    const fragment=document.createDocumentFragment();
+    node.nodeValue.split(CURRENCY_ICON_MARK).forEach((part,index)=>{
+      if(index>0){const img=document.createElement('img');img.className='currency-icon';img.src=src;img.alt='';img.setAttribute('aria-hidden','true');fragment.append(img)}
+      if(part)fragment.append(document.createTextNode(part));
+    });
+    parent.replaceChild(fragment,node);
+  }
+  const selector='[aria-label*="'+CURRENCY_ICON_MARK+'"],[title*="'+CURRENCY_ICON_MARK+'"]';
+  const labelled=[...(root.matches?.(selector)?[root]:[]),...(root.querySelectorAll?.(selector)||[])];
+  labelled.forEach(el=>{for(const name of ['aria-label','title']){const value=el.getAttribute(name);if(value)el.setAttribute(name,value.replaceAll(CURRENCY_ICON_MARK,'').replace(/\s{2,}/g,' '))}});
+}
+new MutationObserver(records=>{
+  for(const record of records){
+    const nodes=record.type==='characterData'?[record.target]:[...record.addedNodes];
+    nodes.forEach(node=>{const root=node.nodeType===Node.TEXT_NODE?node.parentNode:node;if(root&&root.isConnected)showCurrencyIcons(root)});
+  }
+}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 
 function notify(text){$('toast').textContent=text;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2700)}
 function stockText(item){if(item.kind==='special')return 'Always available';if(item.kind==='playershop')return item.stock+' items in listing';return item.disabled?'Trading disabled':item.stock==null?'Stock unavailable':item.stock<=0?'Out of stock':item.stock.toLocaleString()+' in stock'}

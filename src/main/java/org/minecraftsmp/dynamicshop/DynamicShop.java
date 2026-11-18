@@ -55,6 +55,8 @@ public class DynamicShop extends JavaPlugin {
         saveDefaultConfig();
         populateMissingConfigDefaults();
 
+        ThemeInstaller.installSelected(this);
+
         getLogger().info("§aDynamicShop is enabling...");
 
         // --------------------------------------------------------------------
@@ -281,6 +283,7 @@ public class DynamicShop extends JavaPlugin {
         reloadConfig();
         populateMissingConfigDefaults();
         ConfigCacheManager.reload();
+        ThemeInstaller.installSelected(this);
         if (featureMetrics != null) featureMetrics.reload();
         ShopDataManager.reload();
         messageManager.reload();

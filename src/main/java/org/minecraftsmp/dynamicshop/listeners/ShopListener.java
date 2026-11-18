@@ -1061,7 +1061,7 @@ public class ShopListener implements Listener {
         // -------------------------
         if (openAdminEdit.containsKey(p)) {
             e.setCancelled(true);
-            openAdminEdit.get(p).handleClick(e.getRawSlot(), e.isRightClick());
+            openAdminEdit.get(p).handleClick(e.getRawSlot(), e.isRightClick(), e.isShiftClick());
             return true;
         }
 

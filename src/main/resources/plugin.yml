@@ -9,7 +9,7 @@ description: A dynamic economy shop with player-interactive GUI
 website: https://minecraftsmp.org
 
 depend: [Vault]
-softdepend: [PlaceholderAPI, ItemsAdder, Nexo, Oraxen, CoinsEngine, floodgate, ValhallaMMO]
+softdepend: [PlaceholderAPI, ItemsAdder, Nexo, Oraxen, CoinsEngine, floodgate, ValhallaMMO, EvenMoreFish]
 
 commands:
   shop:

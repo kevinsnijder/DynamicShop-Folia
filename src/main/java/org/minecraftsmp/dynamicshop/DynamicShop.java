@@ -142,6 +142,11 @@ public class DynamicShop extends JavaPlugin {
             getLogger().info("Oraxen found — custom items and GUI glyph support enabled.");
         }
 
+        if (org.minecraftsmp.dynamicshop.managers.CustomItemSupport.enabled("EvenMoreFish")
+                && getConfig().getBoolean("evenmorefish.sell-fish", true)) {
+            getLogger().info("EvenMoreFish found — caught fish sell at their EvenMoreFish worth.");
+        }
+
         // Warm up Nexo resolver AFTER all plugins have finished enabling.
         // Nexo's GlyphTag/ShiftTag singletons may not be ready during onEnable.
         if (Bukkit.getPluginManager().getPlugin("Nexo") != null) {

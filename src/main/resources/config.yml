@@ -234,6 +234,18 @@ player-shops:
   enabled: true
 
 # ================================================================
+# EVENMOREFISH
+# ================================================================
+evenmorefish:
+  # Buy caught EvenMoreFish fish in /sell, /shop sellhand and /shop sellall at the worth
+  # EvenMoreFish gives them (rarity worth-multiplier x length, or set-worth). Fish are not
+  # market items: selling them never changes stock or prices. Fish worth 0 are not sellable.
+  sell-fish: true
+  # Multiplies every fish's EvenMoreFish worth. economy.whole-coins rounds each fish down,
+  # to at least 1 coin.
+  price-multiplier: 1.0
+
+# ================================================================
 # CROSS-SERVER SYNC (P2P JeroMQ)
 # ================================================================
 cross-server:

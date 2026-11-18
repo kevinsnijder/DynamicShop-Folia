@@ -12,6 +12,7 @@ import org.minecraftsmp.dynamicshop.category.ItemCategory;
 import org.minecraftsmp.dynamicshop.gui.CategorySelectionGUI;
 import org.minecraftsmp.dynamicshop.gui.ShopGUI;
 import org.minecraftsmp.dynamicshop.managers.CategoryConfigManager;
+import org.minecraftsmp.dynamicshop.managers.EvenMoreFishWrapper;
 import org.minecraftsmp.dynamicshop.managers.MessageManager;
 import org.minecraftsmp.dynamicshop.managers.ShopDataManager;
 import org.minecraftsmp.dynamicshop.transactions.Transaction;
@@ -196,6 +197,8 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     private boolean handleSellHandUnlocked(Player p) {
         if (!plugin.getShopListener().checkTransactionCooldown(p)) return true;
         ItemStack held = p.getInventory().getItemInMainHand();
+        EvenMoreFishWrapper.Fish fish = EvenMoreFishWrapper.find(held);
+        if (fish != null) return sellHeldFish(p, held, fish);
         SaleTarget custom = customSaleTarget(p, held);
         if (custom == null && !canSellHeldItem(p, held)) return true;
         SaleTarget target =
@@ -272,6 +275,51 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /** Sells a held EvenMoreFish fish at its fixed worth; fish never change shop stock or prices. */
+    private boolean sellHeldFish(Player p, ItemStack held, EvenMoreFishWrapper.Fish fish) {
+        int amount = held.getAmount();
+        double payout = fish.value(amount);
+        p.getInventory().setItemInMainHand(null);
+        String currency = plugin.getEconomyManager().getCurrency(held.getType());
+        plugin.getShopListener().recordTransaction(p);
+        if (!plugin.getEconomyManager()
+                .depositSale(p, payout, currency, amount + "x " + fish.name() + " [" + fish.key() + "]"))
+            return true;
+        Map<String, String> ph = new HashMap<>();
+        ph.put("amount", String.valueOf(amount));
+        ph.put("item", fish.name());
+        ph.put("price", plugin.getEconomyManager().format(payout, currency));
+        p.sendMessage(plugin.getMessageManager().getMessage("sold-item-success", ph));
+        return true;
+    }
+
+    /** One species of EvenMoreFish fish taken from the inventory during a sell-all. */
+    private record FishSale(String key, String name, int amount) {}
+
+    /** Removes every sellable fish (optionally only one species) and adds its worth to the payouts. */
+    private int sellInventoryFish(
+            Player p,
+            String onlyItem,
+            Map<String, Double> payoutsByCurrency,
+            Map<String, List<FishSale>> fishByCurrency) {
+        int sold = 0;
+        for (int i = 0; i < p.getInventory().getSize(); i++) {
+            ItemStack item = p.getInventory().getItem(i);
+            EvenMoreFishWrapper.Fish fish = EvenMoreFishWrapper.find(item);
+            if (fish == null || (onlyItem != null && !onlyItem.equals(fish.key()))) continue;
+            String currency = plugin.getEconomyManager().getCurrency(item.getType());
+            double payout = fish.value(item.getAmount());
+            if (!Double.isFinite(payoutsByCurrency.getOrDefault(currency, 0.0) + payout)) continue;
+            p.getInventory().setItem(i, null);
+            payoutsByCurrency.merge(currency, payout, Double::sum);
+            fishByCurrency
+                    .computeIfAbsent(currency, key -> new ArrayList<>())
+                    .add(new FishSale(fish.key(), fish.name(), item.getAmount()));
+            sold += item.getAmount();
+        }
+        return sold;
+    }
+
     // --------------------------------------------------------------------
     // SELL ALL: sell every sellable item, optionally restricted to the held type
     // --------------------------------------------------------------------
@@ -284,6 +332,8 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         String onlyItem = null;
         if (args.length == 2) {
             ItemStack held = p.getInventory().getItemInMainHand();
+            EvenMoreFishWrapper.Fish fish = EvenMoreFishWrapper.find(held);
+            if (fish != null) return sellAllMatchingItems(p, fish.key());
             SaleTarget custom = customSaleTarget(p, held);
             if (custom == null && !canSellHeldItem(p, held)) return true;
             onlyItem = custom != null ? custom.key() : held.getType().name();
@@ -292,20 +342,31 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean sellAllMatchingItems(Player p, String onlyItem) {
-        Map<String, Integer> sellable = findSellableItems(p, onlyItem);
+        Map<String, Integer> sellable =
+                EvenMoreFishWrapper.isFishKey(onlyItem) ? Map.of() : findSellableItems(p, onlyItem);
+        boolean hasFish = false;
+        for (ItemStack item : p.getInventory().getContents()) {
+            EvenMoreFishWrapper.Fish fish = EvenMoreFishWrapper.find(item);
+            if (fish != null && (onlyItem == null || onlyItem.equals(fish.key()))) {
+                hasFish = true;
+                break;
+            }
+        }
 
-        if (sellable.isEmpty()) {
+        if (sellable.isEmpty() && !hasFish) {
             p.sendMessage("§c✗ §7You don't have any items to sell!");
             return true;
         }
 
         Map<String, Double> payoutsByCurrency = new java.util.LinkedHashMap<>();
         Map<String, List<Transaction>> salesByCurrency = new java.util.LinkedHashMap<>();
+        Map<String, List<FishSale>> fishByCurrency = new java.util.LinkedHashMap<>();
         int totalItems = 0;
 
         for (Map.Entry<String, Integer> entry : sellable.entrySet()) {
             totalItems += sellMaterial(p, entry, payoutsByCurrency, salesByCurrency);
         }
+        totalItems += sellInventoryFish(p, onlyItem, payoutsByCurrency, fishByCurrency);
 
         if (totalItems == 0) {
             p.sendMessage("§c✗ §7No items could be sold (shop storage may be full).");
@@ -317,7 +378,8 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
         int paidTypes = 0;
         plugin.getShopListener().recordTransaction(p);
         for (Map.Entry<String, Double> payoutEntry : payoutsByCurrency.entrySet()) {
-            List<Transaction> sales = salesByCurrency.get(payoutEntry.getKey());
+            List<Transaction> sales = salesByCurrency.getOrDefault(payoutEntry.getKey(), List.of());
+            List<FishSale> fishSales = fishByCurrency.getOrDefault(payoutEntry.getKey(), List.of());
             java.util.StringJoiner items = new java.util.StringJoiner(", ");
             for (Transaction sale : sales) {
                 items.add(
@@ -328,6 +390,9 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                                 + sale.getItem()
                                 + "]");
             }
+            for (FishSale fish : fishSales) {
+                items.add(fish.amount() + "x " + fish.name() + " [" + fish.key() + "]");
+            }
             if (!plugin.getEconomyManager()
                     .depositSale(p, payoutEntry.getValue(), payoutEntry.getKey(), items.toString()))
                 continue;
@@ -336,6 +401,10 @@ public class ShopCommand implements CommandExecutor, TabCompleter {
                 paidItems += sale.getAmount();
                 paidTypes++;
             }
+            for (FishSale fish : fishSales) {
+                paidItems += fish.amount();
+            }
+            paidTypes += (int) fishSales.stream().map(FishSale::key).distinct().count();
             if (payoutSummary.length() > 0) {
                 payoutSummary.append(", ");
             }

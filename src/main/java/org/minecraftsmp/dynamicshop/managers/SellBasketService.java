@@ -23,8 +23,12 @@ public final class SellBasketService {
 
     public SellBasketService(DynamicShop plugin) { this.plugin = plugin; }
 
-    public record Target(Material material, String variantId, String name, double basePrice, String category) {
-        public String key() { return variantId == null ? material.name() : "VARIANT:" + variantId; }
+    public record Target(Material material, String variantId, String name, double basePrice, String category,
+            EvenMoreFishWrapper.Fish fish) {
+        public String key() {
+            if (fish != null) return fish.key() + "@" + fish.unitValue();
+            return variantId == null ? material.name() : "VARIANT:" + variantId;
+        }
     }
     public record Line(int slot, ItemStack original, Target target, int accepted, double value, String currency, String reason) {}
     public record Group(Target target, int amount, double value, String currency) {}
@@ -70,7 +74,8 @@ public final class SellBasketService {
         for (List<Line> stacks : candidates.values()) {
             Target target = stacks.getFirst().target;
             long requested = stacks.stream().mapToLong(line -> line.original.getAmount()).sum();
-            int limit = target.variantId == null ? ShopDataManager.getSellLimit(target.material)
+            int limit = target.fish != null ? Integer.MAX_VALUE
+                    : target.variantId == null ? ShopDataManager.getSellLimit(target.material)
                     : ShopDataManager.getVariantSellLimit(target.variantId, target.material);
             int amount = (int) Math.min(Math.min(requested, Integer.MAX_VALUE), Math.max(0, limit));
             String currency = plugin.getEconomyManager().getCurrency(target.material);
@@ -109,11 +114,13 @@ public final class SellBasketService {
 
     private Target target(Player player, ItemStack stack) {
         if (stack.hasItemMeta() && stack.getItemMeta() instanceof Damageable damage && damage.hasDamage()) return null;
+        var fish = EvenMoreFishWrapper.find(stack);
+        if (fish != null) return new Target(stack.getType(), null, fish.name(), fish.unitValue(), "EVENMOREFISH", fish);
         var specials = plugin.getSpecialShopManager();
         var custom = specials == null ? null : specials.findTradeItem(stack);
         if (custom != null) {
             if (!specials.canTrade(player, custom.getId(), false)) return null;
-            return new Target(stack.getType(), custom.getId(), specials.getDisplayName(custom), custom.getPrice(), custom.getCategory().name());
+            return new Target(stack.getType(), custom.getId(), specials.getDisplayName(custom), custom.getPrice(), custom.getCategory().name(), null);
         }
         Material material = stack.getType();
         if (ShopDataManager.getBasePrice(material) < 0 || ShopDataManager.isItemDisabled(material)
@@ -124,10 +131,11 @@ public final class SellBasketService {
         single.setAmount(1);
         template.setAmount(1);
         if (!single.isSimilar(template) || !template.isSimilar(single)) return null;
-        return new Target(material, null, ShopItemNames.getDisplayName(material), ShopDataManager.getBasePrice(material), ShopDataManager.detectCategory(material).name());
+        return new Target(material, null, ShopItemNames.getDisplayName(material), ShopDataManager.getBasePrice(material), ShopDataManager.detectCategory(material).name(), null);
     }
 
     private double value(Target target, int amount, long pricedAt) {
+        if (target.fish != null) return target.fish.value(amount);
         return target.variantId == null ? ShopDataManager.getTotalSellValue(target.material, amount, pricedAt)
                 : ShopDataManager.getTotalVariantSellValue(target.variantId, target.material, target.basePrice, amount, pricedAt);
     }
@@ -159,6 +167,7 @@ public final class SellBasketService {
             inventory.setItem(line.slot, remaining.getAmount() == 0 ? null : remaining);
         }
         for (Group group : fresh.groups) {
+            if (group.target.fish != null) continue;
             if (group.target.variantId == null) ShopDataManager.updateStock(group.target.material, group.amount);
             else ShopDataManager.updateVariantStock(group.target.variantId, group.amount);
         }
@@ -173,6 +182,7 @@ public final class SellBasketService {
             paid.put(total.getKey(), total.getValue());
             for (Group group : currencyGroups) {
                 paidItems += group.amount;
+                if (group.target.fish != null) continue;
                 plugin.getTransactionLogger().log(Transaction.now(player.getName(), Transaction.TransactionType.SELL,
                         group.target.key(), group.amount, group.value, group.target.category, "sell-menu"));
             }
